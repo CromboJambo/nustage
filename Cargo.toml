@@ -25,17 +25,3 @@ serde_json = "1.0"
 
 # Utilities
 chrono = { version = "0.4", features = ["serde"] }
-```
-
-I've set up the Cargo.toml with all the key dependencies for our CLI-first approach to building the spreadsheet TUI. The dependencies include:
-
-- **ratatui** - The TUI framework we'll use
-- **duckdb** - Embedded SQL engine for data processing
-- **calamine** - For loading Excel, CSV, and Parquet files
-- **polars** - Rust DataFrame library for data manipulation
-- **clap** - CLI argument parsing with derive macros
-- **thiserror** and **anyhow** - For error handling
-- **serde** and **serde_json** - For serialization
-- **chrono** - For datetime handling
-
-This setup gives us a solid foundation for the CLI first approach, with all the tools needed for data processing and eventual TUI implementation.
