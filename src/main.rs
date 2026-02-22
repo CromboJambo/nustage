@@ -1,6 +1,7 @@
 use clap::Parser;
 use std::path::PathBuf;
 use thiserror::Error;
+mod data;
 
 use crate::data::{get_column_stats, get_schema, get_unique_values, load_data};
 
