@@ -36,10 +36,8 @@ fn load_csv(file_path: &str) -> Result<DataFrame, PipelineError> {
 
 /// Load Excel file (.xlsx)
 fn load_excel(file_path: &str) -> Result<DataFrame, PipelineError> {
-    let mut workbook: Xlsx<_> =
-        open_workbook(file_path).map_err(|e: calamine::XlsxError| {
-            PipelineError::DataLoadingError(e.to_string())
-        })?;
+    let mut workbook: Xlsx<_> = open_workbook(file_path)
+        .map_err(|e: calamine::XlsxError| PipelineError::DataLoadingError(e.to_string()))?;
 
     let sheet_name = workbook
         .sheet_names()
@@ -245,12 +243,14 @@ fn cast_string_column(col: &Column, target: &DataType) -> Result<Column, Pipelin
                     if trimmed.is_empty() {
                         Ok(None)
                     } else {
-                        parse_bool(trimmed).ok_or_else(|| {
-                            PipelineError::DataLoadingError(format!(
-                                "Failed bool parse for value '{}' in column '{}'",
-                                trimmed, name
-                            ))
-                        }).map(Some)
+                        parse_bool(trimmed)
+                            .ok_or_else(|| {
+                                PipelineError::DataLoadingError(format!(
+                                    "Failed bool parse for value '{}' in column '{}'",
+                                    trimmed, name
+                                ))
+                            })
+                            .map(Some)
                     }
                 })
                 .collect::<Result<Vec<Option<bool>>, PipelineError>>()?;
@@ -273,12 +273,14 @@ fn cast_string_column(col: &Column, target: &DataType) -> Result<Column, Pipelin
                     if trimmed.is_empty() {
                         Ok(None)
                     } else {
-                        parse_i64(trimmed).ok_or_else(|| {
-                            PipelineError::DataLoadingError(format!(
-                                "Failed int parse for value '{}' in column '{}'",
-                                trimmed, name
-                            ))
-                        }).map(Some)
+                        parse_i64(trimmed)
+                            .ok_or_else(|| {
+                                PipelineError::DataLoadingError(format!(
+                                    "Failed int parse for value '{}' in column '{}'",
+                                    trimmed, name
+                                ))
+                            })
+                            .map(Some)
                     }
                 })
                 .collect::<Result<Vec<Option<i64>>, PipelineError>>()?;
@@ -301,12 +303,14 @@ fn cast_string_column(col: &Column, target: &DataType) -> Result<Column, Pipelin
                     if trimmed.is_empty() {
                         Ok(None)
                     } else {
-                        parse_f64(trimmed).ok_or_else(|| {
-                            PipelineError::DataLoadingError(format!(
-                                "Failed float parse for value '{}' in column '{}'",
-                                trimmed, name
-                            ))
-                        }).map(Some)
+                        parse_f64(trimmed)
+                            .ok_or_else(|| {
+                                PipelineError::DataLoadingError(format!(
+                                    "Failed float parse for value '{}' in column '{}'",
+                                    trimmed, name
+                                ))
+                            })
+                            .map(Some)
                     }
                 })
                 .collect::<Result<Vec<Option<f64>>, PipelineError>>()?;
@@ -420,9 +424,23 @@ fn parse_f64(input: &str) -> Option<f64> {
 
 fn parse_date(input: &str) -> Option<NaiveDate> {
     const FORMATS: &[&str] = &["%Y-%m-%d", "%m/%d/%Y", "%d/%m/%Y", "%Y/%m/%d"];
-    FORMATS
+
+    let matches: Vec<&str> = FORMATS
         .iter()
-        .find_map(|fmt| NaiveDate::parse_from_str(input, fmt).ok())
+        .filter_map(|fmt| NaiveDate::parse_from_str(input, fmt).ok().map(|_| *fmt))
+        .collect();
+
+    if matches.len() > 1 {
+        eprintln!(
+            "Warning: Date '{}' matches multiple formats ({:?}), using first match",
+            input, matches
+        );
+    }
+
+    matches
+        .first()
+        .copied()
+        .and_then(|fmt| NaiveDate::parse_from_str(input, fmt).ok())
 }
 
 fn parse_datetime(input: &str) -> Option<NaiveDateTime> {
@@ -435,9 +453,22 @@ fn parse_datetime(input: &str) -> Option<NaiveDateTime> {
         "%Y/%m/%d %H:%M",
     ];
 
-    FORMATS
+    let matches: Vec<&str> = FORMATS
         .iter()
-        .find_map(|fmt| NaiveDateTime::parse_from_str(input, fmt).ok())
+        .filter_map(|fmt| NaiveDateTime::parse_from_str(input, fmt).ok().map(|_| *fmt))
+        .collect();
+
+    if matches.len() > 1 {
+        eprintln!(
+            "Warning: Datetime '{}' matches multiple formats ({:?}), using first match",
+            input, matches
+        );
+    }
+
+    matches
+        .first()
+        .copied()
+        .and_then(|fmt| NaiveDateTime::parse_from_str(input, fmt).ok())
 }
 
 /// Get schema information for a DataFrame
