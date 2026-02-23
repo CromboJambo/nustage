@@ -1,5 +1,5 @@
 use crate::PipelineError;
-use calamine::{Range, Reader, Xls, Xlsx, XmlReader, open_workbook};
+use calamine::{Reader, Xls, Xlsx, open_workbook};
 use polars::prelude::*;
 use std::path::Path;
 
@@ -27,7 +27,7 @@ pub fn load_data(file_path: &str) -> Result<DataFrame, PipelineError> {
 
 /// Load CSV file
 fn load_csv(file_path: &str) -> Result<DataFrame, PipelineError> {
-    let df = CsvReader::from_path(file_path)
+    let df = CsvReader::new(file_path)
         .map_err(|e| PipelineError::DataLoadingError(e.to_string()))?
         .infer_schema(true)
         .finish()
@@ -38,8 +38,8 @@ fn load_csv(file_path: &str) -> Result<DataFrame, PipelineError> {
 
 /// Load Excel file (.xlsx)
 fn load_excel(file_path: &str) -> Result<DataFrame, PipelineError> {
-    let mut workbook: Xlsx<_> =
-        open_workbook(file_path).map_err(|e| PipelineError::DataLoadingError(e.to_string()))?;
+    let mut workbook: Xlsx<_> = open_workbook(file_path)
+        .map_err(|e| PipelineError::DataLoadingError(e.to_string()))?;
 
     let sheet_name = workbook
         .sheet_names()
@@ -51,17 +51,16 @@ fn load_excel(file_path: &str) -> Result<DataFrame, PipelineError> {
     })?;
 
     // Convert Excel range to Polars DataFrame
-    let rows: Vec<Row> = range
+    let rows: Vec<Vec<String>> = range
         .rows()
         .map(|row| row.iter().map(|cell| cell.to_string()).collect())
         .collect();
 
-    let headers: Vec<&str> = rows
-        .first()
-        .unwrap_or(&vec![])
-        .iter()
-        .map(|s| s.as_str())
-        .collect();
+    if rows.is_empty() {
+        return Ok(DataFrame::default());
+    }
+
+    let headers = rows[0].clone();
     let data: Vec<Vec<&str>> = rows
         .iter()
         .skip(1)
@@ -76,8 +75,8 @@ fn load_excel(file_path: &str) -> Result<DataFrame, PipelineError> {
 
 /// Load Excel file (.xls) - legacy format
 fn load_excel_legacy(file_path: &str) -> Result<DataFrame, PipelineError> {
-    let mut workbook: Xls<_> =
-        open_workbook(file_path).map_err(|e| PipelineError::DataLoadingError(e.to_string()))?;
+    let mut workbook: Xls<_> = open_workbook(file_path)
+        .map_err(|e| PipelineError::DataLoadingError(e.to_string()))?;
 
     let sheet_name = workbook
         .sheet_names()
@@ -89,17 +88,16 @@ fn load_excel_legacy(file_path: &str) -> Result<DataFrame, PipelineError> {
     })?;
 
     // Convert Excel range to Polars DataFrame
-    let rows: Vec<Row> = range
+    let rows: Vec<Vec<String>> = range
         .rows()
         .map(|row| row.iter().map(|cell| cell.to_string()).collect())
         .collect();
 
-    let headers: Vec<&str> = rows
-        .first()
-        .unwrap_or(&vec![])
-        .iter()
-        .map(|s| s.as_str())
-        .collect();
+    if rows.is_empty() {
+        return Ok(DataFrame::default());
+    }
+
+    let headers = rows[0].clone();
     let data: Vec<Vec<&str>> = rows
         .iter()
         .skip(1)
@@ -114,10 +112,12 @@ fn load_excel_legacy(file_path: &str) -> Result<DataFrame, PipelineError> {
 
 /// Load Parquet file
 fn load_parquet(file_path: &str) -> Result<DataFrame, PipelineError> {
-    let df = ParquetReader::new(file_path)
+    let df = ParquetFile::from_path(file_path)
         .map_err(|e| PipelineError::DataLoadingError(e.to_string()))?
         .finish()
-        .ok_or_else(|| PipelineError::DataLoadingError(e.to_string()))?;
+        .ok_or_else(|| {
+            PipelineError::DataLoadingError("Failed to read parquet file".to_string())
+        })?;
 
     Ok(df)
 }
@@ -141,10 +141,9 @@ pub fn get_schema(df: &DataFrame) -> Result<Vec<ColumnSchema>, PipelineError> {
 
 /// Get unique values for a column
 pub fn get_unique_values(df: &DataFrame, column: &str) -> Result<Vec<String>, PipelineError> {
-   pub fn get_unique_values(df: &DataFrame, column: &str) -> Result<Vec<String>, PipelineError> {
-       let col = df
-           .column(column)
-           .ok_or_else(|| PipelineError::DataLoadingError(format!("Column not found: {}", column)))?;
+    let col = df
+        .column(column)
+        .ok_or_else(|| PipelineError::DataLoadingError(format!("Column not found: {}", column)))?;
 
     let unique_values = col
         .iter()
