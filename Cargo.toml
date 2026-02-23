@@ -10,7 +10,7 @@ ratatui = "0.29"
 # Data Processing
 duckdb = { version = "1.1", features = ["bundled"] }
 calamine = "0.33"
-polars = "0.53"
+polars = { version = "0.53", features = ["parquet", "csv"] }
 
 # CLI Argument Parsing
 clap = { version = "4.5", features = ["derive"] }

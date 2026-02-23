@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use thiserror::Error;
 mod data;
 
-use crate::data::{get_column_stats, get_schema, get_unique_values, load_data};
+use crate::data::{detect_and_apply_types, get_schema, load_data};
 
 /// Nustage: Terminal-first spreadsheet transformation tool
 #[derive(Parser, Debug)]
@@ -55,6 +55,7 @@ pub struct Step {
 #[derive(Debug, Clone)]
 pub enum TransformType {
     Source,
+    DetectTypes,
     Filter,
     AddColumn,
     SelectColumns,
@@ -120,16 +121,13 @@ fn main() -> Result<(), PipelineError> {
 
     // Load data and create initial source step
     println!("Loading data from: {}", pipeline.source);
-    let df = load_data(&pipeline.source)?;
+    let loaded_df = load_data(&pipeline.source)?;
 
-    println!("Loaded {} rows with {} columns", df.height(), df.width());
-
-    // Get schema information
-    let schema = get_schema(&df)?;
-    println!("Schema:");
-    for col in &schema {
-        println!("  - {} ({})", col.name, col.data_type);
-    }
+    println!(
+        "Loaded {} rows with {} columns",
+        loaded_df.height(),
+        loaded_df.width()
+    );
 
     // Create source step
     pipeline.steps.push(Step {
@@ -141,6 +139,45 @@ fn main() -> Result<(), PipelineError> {
             value: pipeline.source.clone(),
         }],
     });
+
+    // Detect and apply best-effort column types by default.
+    let (df, type_changes) = detect_and_apply_types(&loaded_df)?;
+
+    if type_changes.is_empty() {
+        println!("Type detection: no changes");
+    } else {
+        println!("Type detection: {} column(s) updated", type_changes.len());
+        for change in &type_changes {
+            println!(
+                "  - {}: {} -> {}",
+                change.column, change.from_type, change.to_type
+            );
+        }
+    }
+
+    pipeline.steps.push(Step {
+        name: "Detect Types".to_string(),
+        description: if type_changes.is_empty() {
+            "Auto type detection (no inferred changes)".to_string()
+        } else {
+            format!(
+                "Auto type detection updated {} column(s)",
+                type_changes.len()
+            )
+        },
+        transform_type: TransformType::DetectTypes,
+        parameters: vec![Parameter {
+            name: "changes".to_string(),
+            value: type_changes.len().to_string(),
+        }],
+    });
+
+    // Get schema information
+    let schema = get_schema(&df)?;
+    println!("Schema:");
+    for col in &schema {
+        println!("  - {} ({})", col.name, col.data_type);
+    }
 
     // TODO: Process commands
     // TODO: Generate SQL if requested
