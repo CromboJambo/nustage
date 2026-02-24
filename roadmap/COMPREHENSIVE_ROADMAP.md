@@ -306,6 +306,34 @@ WHERE (Region IN ('North', 'South'))
   AND (@Amt > 0)
 ```
 
+### 7. Column Management & Rendering
+- **Soft-Width Columns**: Variable-width column sizing with line-break tolerance
+- **Column Hats**: Dynamic semantic keys inferred from data patterns
+- **Schema Persistence**: TOML-based schema storage for versionable transformations
+- **Column-Level Transforms**: Vectorized formulas applied to entire columns
+- **Replayable Pipeline**: Each transformation step can be replayed on new data
+
+**Soft-Width Columns**:
+- Every column has a "soft width" that determines how much space it displays/allocates
+- Width is not rigid; it expands dynamically to fit content
+- Line breaks inside a column don't break parsing — they're contained within the column
+- Visually, this lets humans "read it like a table" without forcing strict alignment
+
+**Column Hats**:
+- Each column can acquire a semantic key at runtime — metadata about its identity
+- Keys are attached dynamically based on inference, confidence, or user annotation
+- Think: Vendor | Amount | Date → internally becomes Column { key: "vendor", type: text, ... }
+- Keys allow the system to:
+  - Reassign misaligned data if rows shift
+  - Apply column-level formulas
+  - Track history in a replayable pipeline
+  - Validate new rows against expected type/distribution
+
+**Replayable Pipeline**:
+- Stepwise flow: Parse raw PSV → Split on | → Trim whitespace → Respect line breaks → Infer column hats → Analyze first N rows → Detect type, pattern, distribution → Assign keys → Dynamic alignment
+- For incoming rows: Score each value against each column hat → Swap values if it improves fit → Column-level transforms only → Applied to the entire vector
+- Each transform is a step: Can replay on new raw data → Version-controlled
+
 ## Technical Challenges
 
 1. **Expression Parser**: Need robust parsing of `@field` syntax
@@ -316,10 +344,10 @@ WHERE (Region IN ('North', 'South'))
 6. **Filter State Management**: Track stationary filters independently from steps
 7. **Filter UI Layout**: Implement draggable, resizable filter panels in TUI
 8. **Filter Performance**: Apply filters efficiently without reprocessing entire datasets
-5. **Schema Evolution**: Handle schema changes across steps
-6. **Filter State Management**: Track stationary filters independently from steps
-7. **Filter UI Layout**: Implement draggable, resizable filter panels in TUI
-8. **Filter Performance**: Apply filters efficiently without reprocessing entire datasets
+9. **Soft-Width Column Rendering**: Calculate dynamic column widths based on content
+10. **Column Hat Inference**: Implement heuristic-based key detection from data patterns
+11. **Schema Persistence**: Store and load TOML-based schema definitions
+12. **Replayable Pipeline**: Track transformation history for replayability
 
 ## Development Priorities
 
@@ -337,6 +365,10 @@ WHERE (Region IN ('North', 'South'))
 4. Live SQL preview
 5. Step reordering functionality
 6. Performance optimization for larger datasets
+7. Implement soft-width column rendering
+8. Build column hat inference engine
+9. Add schema persistence (TOML)
+10. Implement replayable pipeline tracking
 
 ### Long Term (90+ days)
 1. Advanced transforms (joins, pivots, custom SQL)
