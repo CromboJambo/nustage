@@ -2,10 +2,8 @@ use clap::Parser;
 use std::path::PathBuf;
 use thiserror::Error;
 mod data;
-mod tui;
 
 use crate::data::{detect_and_apply_types, get_schema, load_data};
-use crate::tui::App;
 
 /// Nustage: Terminal-first spreadsheet transformation tool
 #[derive(Parser, Debug)]
@@ -107,6 +105,9 @@ pub enum PipelineError {
 
     #[error("Invalid step: {0}")]
     InvalidStep(String),
+
+    #[error("IO error: {0}")]
+    Io(#[from] std::io::Error),
 }
 
 /// Main entry point
@@ -185,38 +186,8 @@ fn main() -> Result<(), PipelineError> {
     // TODO: Generate SQL if requested
 
     if cli.tui {
-        // Initialize TUI
-        println!("Starting TUI mode...");
-
-        use crossterm::{
-            execute,
-            terminal::{
-                EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode,
-            },
-        };
-        use ratatui::{
-            backend::CrosstermBackend,
-            terminal::{EnableMouseCapture, Terminal},
-        };
-        use std::io;
-
-        // Setup terminal
-        let mut stdout = io::stderr();
-        enable_raw_mode()?;
-        execute!(stdout, EnterAlternateScreen)?;
-
-        let backend = CrosstermBackend::new(stdout);
-        let mut terminal = Terminal::new(backend).unwrap();
-
-        // Create and run app
-        let mut app = tui::App::new(pipeline);
-        if let Err(e) = app.run(&mut terminal) {
-            eprintln!("Error running TUI: {:?}", e);
-        }
-
-        // Cleanup terminal on exit
-        execute!(terminal.backend_mut(), LeaveAlternateScreen)?;
-        disable_raw_mode()?;
+        println!("TUI mode is not fully implemented yet");
+        println!("Use CLI mode for now.");
     } else {
         // CLI mode
         println!("Steps: {}", pipeline.steps.len());
