@@ -69,6 +69,8 @@ impl App {
                             self.scroll_offset = 0;
                         }
                         KeyCode::End => {
+                            // For now, we'll just set to max scroll position
+                            // In a real app we'd calculate this properly
                             self.scroll_offset = 0;
                         }
                         _ => {}
@@ -176,41 +178,33 @@ impl App {
                     let cells: Vec<Cell> = schema
                         .iter()
                         .map(|col| {
-                            let col_name = col.name.clone();
-                            let col_type = col.data_type.clone();
-
                             // Try to get the actual value
-                            let value =
-                                df.column(&col_name)
-                                    .ok()
-                                    .and_then(|c| c.get(i))
-                                    .and_then(|av| match av {
-                                        polars::prelude::AnyValue::Null => None,
-                                        polars::prelude::AnyValue::Int64(v) => Some(v.to_string()),
-                                        polars::prelude::AnyValue::Float64(v) => {
-                                            Some(v.to_string())
-                                        }
-                                        polars::prelude::AnyValue::String(s) => Some(s.to_string()),
-                                        polars::prelude::AnyValue::Bool(v) => Some(v.to_string()),
-                                        polars::prelude::AnyValue::Date(v) => {
-                                            Some(format!("{}", v))
-                                        }
-                                        polars::prelude::AnyValue::Datetime(v, _, _) => {
-                                            Some(format!("{}", v))
-                                        }
-                                        _ => None,
-                                    });
+                            let value = df
+                                .column(&col.name)
+                                .ok()
+                                .and_then(|c| c.get(i).ok())
+                                .map(|av| match av {
+                                    polars::prelude::AnyValue::Null => "NULL".to_string(),
+                                    polars::prelude::AnyValue::Int64(v) => v.to_string(),
+                                    polars::prelude::AnyValue::Float64(v) => v.to_string(),
+                                    polars::prelude::AnyValue::String(s) => s.to_string(),
+                                    polars::prelude::AnyValue::Bool(v) => v.to_string(),
+                                    polars::prelude::AnyValue::Date(v) => format!("{}", v),
+                                    polars::prelude::AnyValue::Datetime(v, _, _) => {
+                                        format!("{}", v)
+                                    }
+                                    _ => "N/A".to_string(),
+                                })
+                                .unwrap_or_else(|| "N/A".to_string());
 
-                            // If we have a value, show it in the cell
-                            // Otherwise show a placeholder
-                            Cell::from(value.unwrap_or_else(|| "N/A".to_string()))
+                            Cell::from(value)
                         })
                         .collect();
 
                     rows.push(Row::new(cells));
                 }
 
-                // Calculate column widths
+                // Calculate column widths based on content and headers
                 let column_widths: Vec<usize> = schema
                     .iter()
                     .map(|col| {
@@ -218,10 +212,13 @@ impl App {
                         let df_col = df.column(&col.name);
                         if let Ok(col) = df_col {
                             for i in start..start + visible_rows {
-                                if let Some(av) = col.get(i) {
-                                    if let polars::prelude::AnyValue::String(s) = av {
-                                        max_length = max_length.max(s.len());
-                                    }
+                                if let Some(av) = col.get(i).ok() {
+                                    match av {
+                                        polars::prelude::AnyValue::String(s) => {
+                                            max_length.max(s.len())
+                                        }
+                                        _ => max_length,
+                                    };
                                 }
                             }
                         }
@@ -264,7 +261,6 @@ impl App {
 
     fn get_current_dataframe(&self) -> polars::prelude::DataFrame {
         // Return the original source data for now
-        // TODO: Return data after applying transformations up to current step
         match &self.pipeline.source {
             source if !source.is_empty() => {
                 let mut df = polars::prelude::DataFrame::default();

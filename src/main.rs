@@ -1,6 +1,7 @@
 use clap::Parser;
 use std::path::PathBuf;
 use thiserror::Error;
+
 mod data;
 
 use crate::data::{detect_and_apply_types, get_schema, load_data};
@@ -114,23 +115,23 @@ pub enum PipelineError {
 fn main() -> Result<(), PipelineError> {
     let cli = Cli::parse();
 
-    // Load initial pipeline
-    let mut pipeline = Pipeline {
-        source: cli.input.to_string_lossy().to_string(),
-        steps: Vec::new(),
-        filters: Vec::new(),
-        current_step: 0,
-    };
-
     // Load data and create initial source step
-    println!("Loading data from: {}", pipeline.source);
-    let loaded_df = load_data(&pipeline.source)?;
+    println!("Loading data from: {}", cli.input.display());
+    let loaded_df = load_data(&cli.input.to_string_lossy())?;
 
     println!(
         "Loaded {} rows with {} columns",
         loaded_df.height(),
         loaded_df.width()
     );
+
+    // Create pipeline state
+    let mut pipeline = Pipeline {
+        source: cli.input.to_string_lossy().to_string(),
+        steps: Vec::new(),
+        filters: Vec::new(),
+        current_step: 0,
+    };
 
     // Create source step
     pipeline.steps.push(Step {
@@ -182,9 +183,6 @@ fn main() -> Result<(), PipelineError> {
         println!("  - {} ({})", col.name, col.data_type);
     }
 
-    // TODO: Process commands
-    // TODO: Generate SQL if requested
-
     if cli.tui {
         println!("TUI mode is not fully implemented yet");
         println!("Use CLI mode for now.");
@@ -192,6 +190,10 @@ fn main() -> Result<(), PipelineError> {
         // CLI mode
         println!("Steps: {}", pipeline.steps.len());
         println!("Filters: {}", pipeline.filters.len());
+
+        if cli.show_sql {
+            println!("SQL generation would be shown here");
+        }
     }
 
     Ok(())
