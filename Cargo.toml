@@ -3,6 +3,20 @@ name = "nustage"
 version = "0.1.0"
 edition = "2024"
 
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[[bin]]
+name = "data_test"
+path = "src/test_data_loader.rs"
+
+[[bin]]
+name = "nustage"
+path = "src/main.rs"
+
+[lib]
+name = "nustage"
+path = "src/lib.rs"
+
 [dependencies]
 # TUI Framework
 ratatui = "0.29"
@@ -27,6 +41,8 @@ serde_json = "1.0"
 # Utilities
 chrono = { version = "0.4", features = ["serde"] }
 
-[[bin]]
-name = "data_test"
-path = "src/test_data_loader.rs"
+[profile.dev]
+opt-level = 0
+
+[profile.release]
+opt-level = 3
