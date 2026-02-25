@@ -31,7 +31,7 @@ impl App {
             current_step_index: 0,
             selected_column: None,
             scroll_offset: 0,
-            rows_per_page: 50,
+            rows_per_page: 20,
         }
     }
 
@@ -69,8 +69,7 @@ impl App {
                             self.scroll_offset = 0;
                         }
                         KeyCode::End => {
-                            // For now, we'll just set to max scroll position
-                            // In a real app we'd calculate this properly
+                            // We'll handle this properly in the render function
                             self.scroll_offset = 0;
                         }
                         _ => {}
@@ -155,7 +154,7 @@ impl App {
         // Get schema for column information
         match get_schema(&df) {
             Ok(schema) => {
-                // Create header row
+                // Create header row with proper column names
                 let headers: Vec<Cell> = schema
                     .iter()
                     .map(|col| Cell::from(col.name.clone()))
@@ -166,9 +165,10 @@ impl App {
                 // Create data rows with scroll support
                 let mut rows: Vec<Row> = vec![];
 
-                // Calculate visible rows
-                let visible_rows = self.rows_per_page.min(df.height());
-                let start = self.scroll_offset.min(df.height() - visible_rows);
+                // Calculate visible rows (limit to what fits in area)
+                let max_visible_rows = area.height.saturating_sub(3) as usize; // Leave space for header and status
+                let visible_rows = self.rows_per_page.min(max_visible_rows).min(df.height());
+                let start = self.scroll_offset.min(df.height().saturating_sub(visible_rows));
 
                 for i in start..start + visible_rows {
                     if i >= df.height() {
@@ -178,26 +178,31 @@ impl App {
                     let cells: Vec<Cell> = schema
                         .iter()
                         .map(|col| {
-                            // Try to get the actual value
-                            let value = df
-                                .column(&col.name)
-                                .ok()
-                                .and_then(|c| c.get(i).ok())
-                                .map(|av| match av {
-                                    polars::prelude::AnyValue::Null => "NULL".to_string(),
-                                    polars::prelude::AnyValue::Int64(v) => v.to_string(),
-                                    polars::prelude::AnyValue::Float64(v) => v.to_string(),
-                                    polars::prelude::AnyValue::String(s) => s.to_string(),
-                                    polars::prelude::AnyValue::Bool(v) => v.to_string(),
-                                    polars::prelude::AnyValue::Date(v) => format!("{}", v),
-                                    polars::prelude::AnyValue::Datetime(v, _, _) => {
-                                        format!("{}", v)
+                            // Try to get the actual value from this row and column
+                            let cell_value = match df.column(&col.name) {
+                                Ok(column) => {
+                                    if i < column.len() {
+                                        match column.get(i) {
+                                            Ok(value) => match value {
+                                                polars::prelude::AnyValue::Null => "NULL".to_string(),
+                                                polars::prelude::AnyValue::Int64(v) => v.to_string(),
+                                                polars::prelude::AnyValue::Float64(v) => v.to_string(),
+                                                polars::prelude::AnyValue::String(s) => s.to_string(),
+                                                polars::prelude::AnyValue::Bool(v) => v.to_string(),
+                                                polars::prelude::AnyValue::Date(v) => format!("{}", v),
+                                                polars::prelude::AnyValue::Datetime(v, _, _) => {
+                                                    format!("{}", v)
+                                                }
+                                                _ => "N/A".to_string(),
+                                            }
+                                        }
+                                        Err(_) => "ERROR".to_string(),
                                     }
-                                    _ => "N/A".to_string(),
-                                })
-                                .unwrap_or_else(|| "N/A".to_string());
+                                }
+                                Err(_) => "ERROR".to_string(),
+                            };
 
-                            Cell::from(value)
+                            Cell::from(cell_value)
                         })
                         .collect();
 
@@ -205,26 +210,25 @@ impl App {
                 }
 
                 // Calculate column widths based on content and headers
-                let column_widths: Vec<usize> = schema
+                let mut column_widths: Vec<usize> = schema
                     .iter()
-                    .map(|col| {
-                        let max_length = col.name.len();
-                        let df_col = df.column(&col.name);
-                        if let Ok(col) = df_col {
-                            for i in start..start + visible_rows {
-                                if let Some(av) = col.get(i).ok() {
-                                    match av {
-                                        polars::prelude::AnyValue::String(s) => {
-                                            max_length.max(s.len())
-                                        }
-                                        _ => max_length,
-                                    };
-                                }
-                            }
-                        }
-                        max_length + 4 // Add some padding
-                    })
+                    .map(|col| col.name.len())
                     .collect();
+
+                // Adjust for actual data content
+                for row in &rows {
+                    for (i, cell) in row.cells.iter().enumerate() {
+                        if i < column_widths.len() {
+                            let text_len = cell.content.to_string().len();
+                            column_widths[i] = column_widths[i].max(text_len);
+                        }
+                    }
+                }
+
+                // Add padding to columns
+                for width in &mut column_widths {
+                    *width += 2; // Add some padding
+                }
 
                 let table = Table::new(
                     rows,

@@ -26,3 +26,7 @@ serde_json = "1.0"
 
 # Utilities
 chrono = { version = "0.4", features = ["serde"] }
+
+[[bin]]
+name = "data_test"
+path = "src/test_data_loader.rs"
