@@ -1,7 +1,7 @@
 use crate::Pipeline;
 use crate::data::{get_schema, load_data};
 use crossterm::{
-    event::{self, Event, KeyCode},
+    event::{self, Event, KeyCode, KeyEventKind},
     execute,
     terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
@@ -10,6 +10,7 @@ use ratatui::{
     backend::Backend,
     layout::{Constraint, Layout, Rect},
     style::{Color, Style},
+    text::{Line, Span},
     widgets::{Block, Borders, Cell, Row, Table},
 };
 use std::io;
@@ -19,6 +20,8 @@ pub struct App {
     pub pipeline: Pipeline,
     pub current_step_index: usize,
     pub selected_column: Option<String>,
+    pub scroll_offset: usize,
+    pub rows_per_page: usize,
 }
 
 impl App {
@@ -27,6 +30,8 @@ impl App {
             pipeline,
             current_step_index: 0,
             selected_column: None,
+            scroll_offset: 0,
+            rows_per_page: 50,
         }
     }
 
@@ -44,17 +49,27 @@ impl App {
             // Handle key events with timeout to avoid blocking indefinitely
             if event::poll(Duration::from_millis(100))? {
                 match event::read()? {
-                    Event::Key(key) => match key.code {
+                    Event::Key(key) if key.kind == KeyEventKind::Press => match key.code {
                         KeyCode::Char('q') | KeyCode::Esc => break,
                         KeyCode::Down => {
-                            if self.current_step_index < self.pipeline.steps.len() - 1 {
-                                self.current_step_index += 1;
-                            }
+                            self.scroll_offset = self.scroll_offset.saturating_add(1);
                         }
                         KeyCode::Up => {
-                            if self.current_step_index > 0 {
-                                self.current_step_index -= 1;
-                            }
+                            self.scroll_offset = self.scroll_offset.saturating_sub(1);
+                        }
+                        KeyCode::PageDown => {
+                            self.scroll_offset =
+                                self.scroll_offset.saturating_add(self.rows_per_page);
+                        }
+                        KeyCode::PageUp => {
+                            self.scroll_offset =
+                                self.scroll_offset.saturating_sub(self.rows_per_page);
+                        }
+                        KeyCode::Home => {
+                            self.scroll_offset = 0;
+                        }
+                        KeyCode::End => {
+                            self.scroll_offset = 0;
                         }
                         _ => {}
                     },
@@ -126,16 +141,17 @@ impl App {
     }
 
     fn render_data_area(&self, f: &mut Frame, area: Rect) {
-        // For now we'll just show the current step's data
-        if self.pipeline.steps.is_empty() {
-            let block = Block::new().title("No Data").borders(Borders::ALL);
+        // Get current dataframe
+        let df = self.get_current_dataframe();
 
+        if df.height() == 0 {
+            let block = Block::new().title("No Data").borders(Borders::ALL);
             f.render_widget(block, area);
             return;
         }
 
         // Get schema for column information
-        match get_schema(&self.get_current_dataframe()) {
+        match get_schema(&df) {
             Ok(schema) => {
                 // Create header row
                 let headers: Vec<Cell> = schema
@@ -145,47 +161,110 @@ impl App {
 
                 let header_row = Row::new(headers).style(Style::default().fg(Color::Yellow));
 
-                // Create data rows (just first few rows for demo)
+                // Create data rows with scroll support
                 let mut rows: Vec<Row> = vec![];
 
-                // For simplicity, just show column names and some sample data
-                if !schema.is_empty() {
-                    let sample_rows = 10.min(self.get_current_dataframe().height());
-                    for i in 0..sample_rows {
-                        let cells: Vec<Cell> = schema
-                            .iter()
-                            .map(|col| {
-                                // Just show a placeholder value for now
-                                Cell::from(format!("Row{}", i))
-                            })
-                            .collect();
+                // Calculate visible rows
+                let visible_rows = self.rows_per_page.min(df.height());
+                let start = self.scroll_offset.min(df.height() - visible_rows);
 
-                        rows.push(Row::new(cells));
+                for i in start..start + visible_rows {
+                    if i >= df.height() {
+                        break;
                     }
+
+                    let cells: Vec<Cell> = schema
+                        .iter()
+                        .map(|col| {
+                            let col_name = col.name.clone();
+                            let col_type = col.data_type.clone();
+
+                            // Try to get the actual value
+                            let value =
+                                df.column(&col_name)
+                                    .ok()
+                                    .and_then(|c| c.get(i))
+                                    .and_then(|av| match av {
+                                        polars::prelude::AnyValue::Null => None,
+                                        polars::prelude::AnyValue::Int64(v) => Some(v.to_string()),
+                                        polars::prelude::AnyValue::Float64(v) => {
+                                            Some(v.to_string())
+                                        }
+                                        polars::prelude::AnyValue::String(s) => Some(s.to_string()),
+                                        polars::prelude::AnyValue::Bool(v) => Some(v.to_string()),
+                                        polars::prelude::AnyValue::Date(v) => {
+                                            Some(format!("{}", v))
+                                        }
+                                        polars::prelude::AnyValue::Datetime(v, _, _) => {
+                                            Some(format!("{}", v))
+                                        }
+                                        _ => None,
+                                    });
+
+                            // If we have a value, show it in the cell
+                            // Otherwise show a placeholder
+                            Cell::from(value.unwrap_or_else(|| "N/A".to_string()))
+                        })
+                        .collect();
+
+                    rows.push(Row::new(cells));
                 }
+
+                // Calculate column widths
+                let column_widths: Vec<usize> = schema
+                    .iter()
+                    .map(|col| {
+                        let max_length = col.name.len();
+                        let df_col = df.column(&col.name);
+                        if let Ok(col) = df_col {
+                            for i in start..start + visible_rows {
+                                if let Some(av) = col.get(i) {
+                                    if let polars::prelude::AnyValue::String(s) = av {
+                                        max_length = max_length.max(s.len());
+                                    }
+                                }
+                            }
+                        }
+                        max_length + 4 // Add some padding
+                    })
+                    .collect();
 
                 let table = Table::new(
                     rows,
-                    schema
+                    column_widths
                         .iter()
-                        .map(|_| Constraint::Percentage(20))
+                        .map(|&w| Constraint::Length(w as u16))
                         .collect::<Vec<_>>(),
                 )
                 .header(header_row)
                 .block(Block::new().title("Data Preview").borders(Borders::ALL));
 
                 f.render_widget(table, area);
+
+                // Add status bar
+                let status_text = format!(
+                    "Rows: {} | Scroll: {}/{} | Step: {}",
+                    df.height(),
+                    self.scroll_offset + 1,
+                    df.height(),
+                    self.current_step_index + 1
+                );
+                let status = Line::from(Span::styled(
+                    status_text,
+                    Style::default().fg(Color::DarkGray),
+                ));
+                f.render_widget(status, area);
             }
             Err(_) => {
                 let block = Block::new().title("Error").borders(Borders::ALL);
-
                 f.render_widget(block, area);
             }
         }
     }
 
     fn get_current_dataframe(&self) -> polars::prelude::DataFrame {
-        // Try to load original source file if available
+        // Return the original source data for now
+        // TODO: Return data after applying transformations up to current step
         match &self.pipeline.source {
             source if !source.is_empty() => {
                 let mut df = polars::prelude::DataFrame::default();
