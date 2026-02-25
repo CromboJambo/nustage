@@ -13,10 +13,28 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
 
     println!("Testing data loading from: {:?}", cli.input);
-    println!("File path received: {}", cli.input.display());
 
-    // At this point, we just verify the CLI parsing works
-    println!("✅ Main binary executed successfully");
+    // Load the data using your existing function
+    match nustage::data::load_data(&cli.input.to_string_lossy()) {
+        Ok(df) => {
+            println!(
+                "✅ Successfully loaded {} rows with {} columns",
+                df.height(),
+                df.width()
+            );
+
+            // Show schema information
+            let schema = nustage::data::get_schema(&df).unwrap();
+            println!("\nSchema:");
+            for col in &schema {
+                println!("  - {}: {}", col.name, col.data_type);
+            }
+        }
+        Err(e) => {
+            eprintln!("❌ Failed to load data: {}", e);
+            return Err(e.into());
+        }
+    }
 
     Ok(())
 }

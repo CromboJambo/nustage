@@ -13,7 +13,7 @@ zed IDE     | awesome IDE build in Rust and like a zen version of VScode | https
 NuShell     | Data first shell that pipes | https://github.com/nushell/nushell
 VisiCalc    | OG greentext glory | https://en.wikipedia.org/wiki/VisiCalc
 Lotus_1-2-3 | my first spreadsheet | https://en.wikipedia.org/wiki/Lotus_1-2-3
-            | |
+lazygit     | superB TUI for git | https://github.com/jesseduffield/lazygit
             | |
             | |
             | |
