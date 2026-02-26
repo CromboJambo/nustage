@@ -18,7 +18,7 @@ DAG         |
 vim         | smi |
 helix       | |
 embed-nu    | |
-            | |
+metabase    | Can connect to SQL databases and Excel-like data sources | https://github.com/metabase/metabase
             | |
             | |
             | |
