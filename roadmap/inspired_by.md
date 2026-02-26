@@ -9,14 +9,15 @@ trip        | personal trip planner --tracker|https://github.com/itskovacs/trip
 tokio       | industry standar Async runtime for rust|https://github.com/tokio-rs/axum
 RustDesk    | Rust sandboxed desktop env|https://github.com/rustdesk/rustdesk
 dorothy     | helpful consolidation and version control for DE config files | https://github.com/bevry/dorothy
-zed IDE     | awesome IDE build in Rust and like a zen version of VScode | https://github.com/zed-industries/zed
+zed IDE     | #idea  awesome IDE build in Rust and like a zen version of VScode | https://github.com/zed-industries/zed
 NuShell     | Data first shell that pipes | https://github.com/nushell/nushell
 VisiCalc    | OG greentext glory | https://en.wikipedia.org/wiki/VisiCalc
 Lotus_1-2-3 | my first spreadsheet | https://en.wikipedia.org/wiki/Lotus_1-2-3
 lazygit     | superB TUI for git | https://github.com/jesseduffield/lazygit
-            | |
-            | |
-            | |
+DAG         | 
+vim         | smi |
+helix       | |
+embed-nu    | |
             | |
             | |
             | |
