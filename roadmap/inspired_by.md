@@ -1,4 +1,4 @@
-FOSS programs| 
+AwesomeSheets|  
 Tabiew       | great way to open and view spreadsheets from a bright developer | https://github.com/shshemi/tabiew
 VisiData     | A terminal interface for exploring and arranging tabular data.| https://github.com/saulpw/visidata
 Yazi         | Yazi - ⚡️ Blazing Fast Terminal File Manager | https://github.com/sxyazi/yazi
@@ -16,28 +16,28 @@ VisiCalc     | OG greentext glory | https://en.wikipedia.org/wiki/VisiCalc
 Lotus_1-2-3  | my first spreadsheet | https://en.wikipedia.org/wiki/Lotus_1-2-3
 lazygit      | superB TUI for git | https://github.com/jesseduffield/lazygit
 DAG          | 
-vim          | smi |
-helix        | |
-embed-nu     | |
+vim          | fast keyboard-driven text editor | https://github.com/vim/vim
+helix        | fast keyboard-driven text editor | https://github.com/helix-editor/helix
+embed-nu     | embed Nu into other applications | https://github.com/nustage/embed-nu
 metabase     | Can connect to SQL databases and Excel-like data sources | https://github.com/metabase/metabase
-zoxide       | smart fuzzy search|
+zoxide       | smart fuzzy search |
 llmfit       | what LLMs fit current system|
 models       | look at model and agent data, changelogs etc hugging face in terminal|
 ranger       | like yazi |
              | |
-csvlens      | could be a good base |
+csvlens      | could be a good base coming from VSCode to Zed |
 eza          | ls but prettier, looks rad, if it works with nushell could be dope|
 lib.rs       | extraordinary way to view crates.io | https://lib.rs
 stow         | link configs, like dorothy maybe more simple and git versioned |
 micasa       | like ERP for your home |
-       | |https://github.com/nullclaw/nullclaw
+nullclaw     | tiny ai inferstructure | https://github.com/nullclaw/nullclaw
        | |https://github.com/lyqht/awesome-supabase#readme
        | |https://github.com/benallfree/awesome-pocketbase#readme
        | |https://github.com/owainlewis/awesome-artificial-intelligence#readme
        | |https://github.com/tayllan/awesome-algorithms#readme
        | |https://github.com/sduff/awesome-splunk#readme
-terraform    | |https://github.com/hashicorp/terraform?tab=readme-ov-file
-umya-spreadsh| umya-spreadsheet is a              | |https://crates.io/crates/umya-spreadsheet
+terraform    | terraform is an infrastructure as code tool | https://github.com/hashicorp/terraform?tab=readme-ov-file
+umya-spreadsh| umya-spreadsheet is a reader/writer for spreadsheet files | https://crates.io/crates/umya-spreadsheet
              | |
              | |
              | |
