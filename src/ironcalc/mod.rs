@@ -9,7 +9,6 @@
 //! - Integration: Loading data between systems, schema awareness
 
 use polars::prelude::*;
-use std::collections::HashMap;
 use thiserror::Error;
 
 /// Error types for IronCalc integration
@@ -79,7 +78,7 @@ impl IronCalcIntegration {
             .collect();
 
         Ok(Self {
-            schema,
+            schema: columns,
             data_frame: df,
         })
     }
@@ -95,7 +94,7 @@ impl IronCalcIntegration {
     }
 
     /// Load data from a file into IronCalc
-    pub fn load_from_file(file_path: &str) -> Result<Self, IronCalcError> {
+    pub fn load_from_file(_file_path: &str) -> Result<Self, IronCalcError> {
         // For now, we'll just return a placeholder implementation
         // In a real implementation, this would use IronCalc's file loading capabilities
         let df = DataFrame::empty();
@@ -118,7 +117,7 @@ impl IronCalcIntegration {
     }
 
     /// Save the workbook to a file
-    pub fn save(&self, file_path: &str) -> Result<(), IronCalcError> {
+    pub fn save(&self, _file_path: &str) -> Result<(), IronCalcError> {
         // For now, we'll just return a placeholder implementation
         // In a real implementation, this would use IronCalc's saving capabilities
         Ok(())
@@ -140,8 +139,8 @@ pub fn load_dataframe_to_ironcalc(df: DataFrame) -> Result<IronCalcIntegration, 
 
 /// Apply a Power Query-style transformation to IronCalc data
 pub fn apply_transformation(
-    integration: &mut IronCalcIntegration,
-    transformation: Transformation,
+    _integration: &mut IronCalcIntegration,
+    _transformation: Transformation,
 ) -> Result<(), IronCalcError> {
     // For now, we'll just return a placeholder implementation
     // In a real implementation, this would use IronCalc's transformation capabilities
@@ -188,9 +187,9 @@ pub fn get_field_names(integration: &IronCalcIntegration) -> Vec<String> {
 
 /// Get cell value with formula resolution
 pub fn get_resolved_value(
-    integration: &IronCalcIntegration,
-    row: usize,
-    col: usize,
+    _integration: &IronCalcIntegration,
+    _row: usize,
+    _col: usize,
 ) -> Result<String, IronCalcError> {
     // For now, we'll just return a placeholder implementation
     // In a real implementation, this would use IronCalc's formula evaluation

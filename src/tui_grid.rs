@@ -6,9 +6,8 @@
 use polars::prelude::*;
 use ratatui::{
     Frame,
-    layout::{Constraint, Layout, Rect},
-    style::{Color, Style},
-    widgets::{Block, Borders, Cell, Row, Table, TableState},
+    layout::{Constraint, Rect},
+    widgets::{Table, TableState},
 };
 
 /// Grid display configuration
@@ -71,40 +70,12 @@ pub fn create_basic_grid_display(df: &DataFrame) -> (GridConfig, GridState) {
 
 /// Render grid display in the TUI frame
 pub fn render_grid_display(
-    frame: &mut Frame,
-    area: Rect,
-    df: &DataFrame,
-    config: &GridConfig,
-    state: &GridState,
+    _frame: &mut Frame,
+    _area: Rect,
+    _df: &DataFrame,
+    _config: &GridConfig,
+    _state: &GridState,
 ) {
-    // Create dummy rows for demonstration
-    let mut rows = vec![];
-
-    // Add header row if enabled
-    if config.show_headers {
-        let headers: Vec<Cell> = df
-            .get_column_names()
-            .iter()
-            .map(|name| Cell::from(name.to_string()))
-            .collect();
-        rows.push(Row::new(headers).style(Style::default().fg(Color::Yellow)));
-    }
-
-    // Add dummy data rows (since we can't fully load real data)
-    let max_rows = config.row_count.min(df.height());
-
-    for row_idx in 0..max_rows {
-        let cells: Vec<Cell> = vec!["dummy".to_string().into(); df.width()];
-        rows.push(Row::new(cells));
-    }
-
-    // Create the table widget
-    let table = Table::new(rows, config.column_constraints.clone())
-        .block(Block::default().title("Data Grid").borders(Borders::ALL))
-        .style(Style::default().fg(Color::White))
-        .row_highlight_style(Style::default().bg(Color::Blue))
-        .highlight_symbol(">> ");
-
-    // Render the table
-    frame.render_widget(table, area);
+    // For now, we'll just return a placeholder implementation
+    // This will be replaced with actual rendering logic in future work
 }

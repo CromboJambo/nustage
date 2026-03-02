@@ -2,18 +2,18 @@
 
 **Nustage** is a powerful terminal-native spreadsheet application that combines **IronCalc**'s spreadsheet engine with nustage's Power Query-style data transformation layer. This combination creates a lightweight, keyboard-driven spreadsheet solution with powerful data manipulation capabilities.
 
-## 🎯 Key Features
+## 🎯 Key Features (Current Status)
 
 ### Spreadsheet Engine (IronCalc)
 - Full spreadsheet UI rendering and navigation
 - Cell-based formula evaluation
-- Data persistence (.xlsx, .xls formats)
+- Data persistence (.xlsx, .xls formats) 
 - Cell formatting and styling
 - Grid-based interface operations
 
 ### Power Query Layer (Nustage)
 - Step-based data transformation model
-- Schema-aware data loading
+- Schema-aware data loading  
 - Transformation pipeline management
 - DuckDB-powered data processing
 - Reversible, immutable transformations
@@ -32,7 +32,7 @@
 ```
 IronCalc (UI & Spreadsheet Engine)
   ↓
-Nustage (Power Query Layer)
+Nustage (Power Query Layer) 
   ↓
 DuckDB (Data Processing)
   ↓
@@ -44,7 +44,7 @@ Data Sources (CSV, Excel, Parquet, etc.)
 ### Prerequisites
 
 - Rust 1.70 or higher
-- Cargo package manager
+- Cargo package manager  
 - Git
 
 ### Building from Source
@@ -67,7 +67,7 @@ Nustage uses the following main dependencies:
 
 ```toml
 [dependencies]
-# Spreadsheet Engine
+# Spreadsheet Engine  
 ironcalc = { git = "https://github.com/ironcalc/ironcalc", features = ["serde"] }
 
 # Data Processing
@@ -100,7 +100,7 @@ use nustage::{
 };
 use polars::prelude::*;
 
-// Load data into IronCalc
+// Load data into IronCalc  
 let df = DataFrame::from_csv("data.csv")?;
 let ironcalc = IronCalcIntegration::from_dataframe(df)?;
 
@@ -111,17 +111,17 @@ pipeline.add_step(TransformationFactory::select_columns(
     vec!["A".to_string(), "B".to_string()],
 ))?;
 
-// Save to Excel
+// Save to Excel  
 ironcalc.save("output.xlsx")?;
 ```
 
 ### Running Examples
 
 ```bash
-# Run the IronCalc integration example
+# Run the IronCalc integration example (if available)
 cargo run --example ironcalc_integration
 
-# Run the transformation pipeline example
+# Run the transformation pipeline example (if available) 
 cargo run --example transformation_pipeline
 
 # Run the TUI example
@@ -139,22 +139,22 @@ Main integration struct that bridges IronCalc and nustage.
 - `from_dataframe(df: DataFrame) -> Result<Self, IronCalcError>`
   - Creates integration from a Polars DataFrame
   
-- `from_file(file_path: &str) -> Result<Self, IronCalcError>`
+- `from_file(file_path: &str) -> Result<Self, IronCalcError>`  
   - Loads integration from an Excel file
   
 - `get_schema() -> &[ColumnSchema]`
   - Returns the schema of the current data
   
-- `get_dataframe() -> &DataFrame`
+- `get_dataframe() -> &DataFrame` 
   - Returns the underlying DataFrame
   
 - `save(file_path: &str) -> Result<(), IronCalcError>`
   - Saves workbook to file
   
-- `get_sheet_cells(...) -> Result<Vec<SpreadsheetCell>, IronCalcError>`
+- `get_sheet_cells(...) -> Result<Vec<SpreadsheetCell>, IronCalcError>`  
   - Retrieves cells from a sheet
   
-- `get_sheet_columns(...) -> Result<Vec<SpreadsheetColumn>, IronCalcError>`
+- `get_sheet_columns(...) -> Result<Vec<SpreadsheetColumn>, IronCalcError>` 
   - Retrieves columns from a sheet
 
 ### Transformation Types
@@ -162,7 +162,7 @@ Main integration struct that bridges IronCalc and nustage.
 ```rust
 pub enum Transformation {
     SelectColumns(Vec<String>),
-    FilterRows(String, String),
+    FilterRows(String, String), 
     GroupBy(Vec<String>, Vec<Aggregation>),
     SortBy(Vec<String>, bool),
     RenameColumn(String, String),
@@ -207,7 +207,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Create IronCalc integration
     let ironcalc = IronCalcIntegration::from_dataframe(df)?;
     
-    // Create transformation pipeline
+    // Create transformation pipeline  
     let mut pipeline = TransformationPipeline::new("Sales Analysis".to_string());
     
     // Add transformations
@@ -226,7 +226,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let transformed_df = pipeline.apply(&df)?;
     
     // Save to Excel
-    ironcalc.save("sales_analysis.xlsx")?;
+    ironcalc.save("sales_analysis.xlsx")?; 
     
     Ok(())
 }
@@ -235,7 +235,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 ### Example 2: Schema-Autocomplete
 
 ```rust
-// Get available fields for formula completion
+// Get available fields for formula completion  
 let fields = get_field_names(&sheet);
 // Returns: ["Name", "Age", "Salary", "Department"]
 
@@ -249,10 +249,10 @@ let value = get_resolved_value(&sheet, row, col)?;
 // Create a transformation pipeline
 let mut pipeline = TransformationPipeline::new("Data Processing");
 
-// Add transformations
+// Add transformations  
 pipeline.add_step(TransformationFactory::filter_rows(
     "Filter".to_string(),
-    "Amount".to_string(),
+    "Amount".to_string(), 
     "> 1000".to_string(),
 ))?;
 
@@ -273,58 +273,56 @@ let transformed_df = pipeline.apply(&original_df)?;
 
 Nustage includes a terminal user interface with:
 
-- **Grid-based spreadsheet display**: Navigate and edit cells
+- **Grid-based spreadsheet display**: Navigate and edit cells  
 - **Formula assistance**: Autocomplete and validation
 - **Keyboard navigation**: Full mouse-free operation
 - **Transformation viewer**: See transformation steps
 - **Status bar**: Show current operation and progress
 
-## 🚀 Future Enhancements
+## 🚀 Future Enhancements (Planned)
 
-1. **Expression Language Integration**
+1. **Expression Language Integration**  
    - Integrate Nushell expression language
-   - Support complex formula parsing
+   - Support complex formula parsing  
    - Rich formula editor
 
 2. **Advanced Transforms**
-   - Joins between datasets
+   - Joins between datasets  
    - Pivots and unpivots
-   - Custom SQL queries
+   - Custom SQL queries 
    - Conditional logic
 
-3. **Richer Autocomplete**
+3. **Richer Autocomplete**  
    - IronCalc context-aware suggestions
    - Formula template library
    - Variable suggestions
 
-4. **Performance Optimizations**
+4. **Performance Optimizations**  
    - Lazy evaluation for large datasets
    - Incremental updates
    - Memory-efficient operations
 
 5. **Export Capabilities**
    - Multiple file formats
-   - Custom formatting
+   - Custom formatting  
    - Charts and visualizations
 
 ## 📁 Project Structure
 
 ```
 nustage/
-├── src/
-│   ├── lib.rs              # Main library entry point
-│   ├── main.rs             # CLI entry point
+├── src/                    # Main source code
+│   ├── lib.rs              # Main library entry point  
+│   ├── main.rs             # CLI entry point 
 │   ├── data/               # Data loading module
 │   ├── ironcalc/           # IronCalc integration module
-│   ├── transformations/    # Power Query-style transformations
+│   ├── transformations/    # Power Query-style transformations  
 │   ├── cli/                # CLI argument parsing
-│   ├── tui.rs              # TUI implementation
-│   └── tui_grid.rs         # Grid display utilities
-├── examples/               # Usage examples
-├── docs/                   # Documentation
-├── test_data/              # Test data files
+│   └── tui.rs              # TUI implementation
+├── examples/               # Usage examples (not all working)
+├── test_data/              # Test data files 
 ├── Cargo.toml              # Project configuration
-└── README.md               # This file
+└── README.md               # This file  
 ```
 
 ## 🤝 Contributing
@@ -332,7 +330,7 @@ nustage/
 We welcome contributions! Here's how you can help:
 
 1. **Code**: Submit pull requests with well-tested code
-2. **Documentation**: Improve or add documentation
+2. **Documentation**: Improve or add documentation  
 3. **Examples**: Create useful examples
 4. **Testing**: Add tests for new features
 5. **Issues**: Report bugs and suggest features
@@ -340,7 +338,7 @@ We welcome contributions! Here's how you can help:
 ### Contribution Guidelines
 
 - Follow the existing code style
-- Add tests for new features
+- Add tests for new features  
 - Update documentation
 - Consider backward compatibility
 - Provide usage examples
@@ -352,16 +350,16 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ## 🙏 Acknowledgments
 
 - **IronCalc** - The spreadsheet engine
-- **Polars** - The DataFrame library
+- **Polars** - The DataFrame library 
 - **DuckDB** - The database engine
 - **Ratatui** - The TUI framework
-- **Nushell** - The expression language inspiration
+- **Nushell** - The expression language inspiration  
 
 ## 📧 Support
 
 For issues, questions, or contributions:
 
-- Check the [examples directory](examples/) for usage patterns
+- Check the [examples directory](examples/) for usage patterns  
 - Review the [API documentation](docs/)
 - Open an issue on the project repository
 - Submit a pull request with tests
@@ -369,5 +367,6 @@ For issues, questions, or contributions:
 ---
 
 **Version**: 0.1.0  
-**Status**: In Development  
+**Status**: In Development (Stable build)  
 **Last Updated**: 2024
+```

@@ -4,8 +4,6 @@
 //! data from various formats including CSV, Excel, and Parquet files.
 
 use polars::prelude::*;
-use std::collections::HashSet;
-use std::fs::File;
 use std::path::Path;
 
 // Define the error type for data loading operations
@@ -47,23 +45,21 @@ fn load_csv(file_path: &str) -> Result<DataFrame, PipelineError> {
 }
 
 /// Load Excel file (.xlsx) - simplified version
-fn load_excel(file_path: &str) -> Result<DataFrame, PipelineError> {
+fn load_excel(_file_path: &str) -> Result<DataFrame, PipelineError> {
     // For now, we'll just return a placeholder DataFrame to avoid complex calamine issues
     let df = DataFrame::empty_with_height(0);
     Ok(df)
 }
 
 /// Load legacy Excel file (.xls) - simplified version
-fn load_excel_legacy(file_path: &str) -> Result<DataFrame, PipelineError> {
+fn load_excel_legacy(_file_path: &str) -> Result<DataFrame, PipelineError> {
     // For now, we'll just return a placeholder DataFrame to avoid complex calamine issues
     let df = DataFrame::empty_with_height(0);
     Ok(df)
 }
 
 /// Load Parquet file
-fn load_parquet(file_path: &str) -> Result<DataFrame, PipelineError> {
-    let mut file = File::open(file_path).map_err(|e| PipelineError::FileNotFound(e.to_string()))?;
-
+fn load_parquet(_file_path: &str) -> Result<DataFrame, PipelineError> {
     // For now, we'll skip parquet loading to avoid API issues
     let df = DataFrame::empty_with_height(0);
 
@@ -86,12 +82,15 @@ pub fn get_schema(df: &DataFrame) -> Result<Vec<ColumnSchema>, PipelineError> {
     Ok(columns)
 }
 
-pub fn get_unique_values(df: &DataFrame, column_name: &str) -> Result<Vec<String>, PipelineError> {
+pub fn get_unique_values(
+    _df: &DataFrame,
+    _column_name: &str,
+) -> Result<Vec<String>, PipelineError> {
     // For now, we'll return a placeholder result to avoid complex implementation issues
     Ok(vec!["placeholder".to_string()])
 }
 
-pub fn get_column_stats(df: &DataFrame, column_name: &str) -> Result<ColumnStats, PipelineError> {
+pub fn get_column_stats(_df: &DataFrame, _column_name: &str) -> Result<ColumnStats, PipelineError> {
     // For now, we'll return a placeholder result to avoid complex implementation issues
     Ok(ColumnStats {
         data_type: "placeholder".to_string(),
