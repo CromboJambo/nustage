@@ -38,9 +38,9 @@ nullclaw     | tiny ai inferstructure | https://github.com/nullclaw/nullclaw
        | |https://github.com/sduff/awesome-splunk#readme
 terraform    | terraform is an infrastructure as code tool | https://github.com/hashicorp/terraform?tab=readme-ov-file
 umya-spreadsh| umya-spreadsheet is a reader/writer for spreadsheet files | https://crates.io/crates/umya-spreadsheet
-             | |
-             | |
-             | |
+asciinema    | terminal recorder better than Power Automate Desktop, could be great with it in powershell!? | https://github.com/asciinema/asciinema
+croc         | file sharing, could be good for talescale |
+ttyd         | terminal emulater can connect to Talescale use -W flag to write - can use CLI aps on home network remotely | 
              | |
              | |
              | |

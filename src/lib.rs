@@ -5,9 +5,15 @@
 
 pub mod cli;
 pub mod data;
+pub mod ironcalc;
 pub mod tui_grid;
 
 // Re-export commonly used types for convenience
 pub use cli::Cli;
 pub use data::{ColumnSchema, PipelineError, get_schema, load_data};
+pub use ironcalc::{
+    IronCalcError, IronCalcIntegration, SpreadsheetCell, SpreadsheetColumn, SpreadsheetRow,
+    Transformation, apply_transformation, get_field_names, get_resolved_value,
+    load_dataframe_to_ironcalc,
+};
 pub use tui_grid::{GridConfig, GridState, create_basic_grid_display, render_grid_display};
