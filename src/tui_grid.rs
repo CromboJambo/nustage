@@ -59,7 +59,7 @@ impl Default for GridState {
 /// Create a basic grid display for initial exploration
 pub fn create_basic_grid_display(df: &DataFrame) -> (GridConfig, GridState) {
     let config = GridConfig {
-        row_count: 15,
+        row_count: 15.min(df.height()),
         column_constraints: vec![Constraint::Percentage(20); df.width()],
         show_headers: true,
     };
@@ -77,9 +77,7 @@ pub fn render_grid_display(
     config: &GridConfig,
     state: &GridState,
 ) {
-    // For now we'll just show a simple table with basic data display
-    // This will be improved to actually extract values from DataFrame in future
-
+    // Create rows for the table - we'll just show some placeholder data to avoid complex type checking
     let mut rows = vec![];
 
     // Add header row if enabled
@@ -92,7 +90,7 @@ pub fn render_grid_display(
         rows.push(Row::new(headers).style(Style::default().fg(Color::Yellow)));
     }
 
-    // Add data rows with placeholder values (will be replaced by real data extraction)
+    // Add data rows (using simple placeholder approach)
     let max_rows = config.row_count.min(df.height());
 
     for row_idx in state.offset..(state.offset + max_rows) {
@@ -100,13 +98,7 @@ pub fn render_grid_display(
             break;
         }
 
-        let cells: Vec<Cell> = (0..df.width())
-            .map(|col_idx| {
-                // Just show placeholder data - actual implementation will extract real values
-                Cell::from(format!("row{}_col{}", row_idx, col_idx))
-            })
-            .collect();
-
+        let cells: Vec<Cell> = vec!["dummy".to_string().into(); df.width()];
         rows.push(Row::new(cells));
     }
 
@@ -124,4 +116,11 @@ pub fn render_grid_display(
 /// Extract cell value as string for a specific row and column (placeholder)
 pub fn get_cell_value(_df: &DataFrame, _row_index: usize, _col_index: usize) -> String {
     "N/A".to_string()
+}
+
+/// Calculate the current view window for grid display
+pub fn calculate_view_window(df: &DataFrame, state: &GridState, max_rows: usize) -> (usize, usize) {
+    let start_row = state.offset;
+    let end_row = (start_row + max_rows).min(df.height());
+    (start_row, end_row)
 }
