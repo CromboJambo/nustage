@@ -7,7 +7,8 @@ use polars::prelude::*;
 use ratatui::{
     Frame,
     layout::{Constraint, Rect},
-    widgets::{Table, TableState},
+    style::{Color, Style},
+    widgets::{Block, Borders, Cell, Row, Table, TableState},
 };
 
 /// Grid display configuration
@@ -70,12 +71,57 @@ pub fn create_basic_grid_display(df: &DataFrame) -> (GridConfig, GridState) {
 
 /// Render grid display in the TUI frame
 pub fn render_grid_display(
-    _frame: &mut Frame,
-    _area: Rect,
-    _df: &DataFrame,
-    _config: &GridConfig,
-    _state: &GridState,
+    frame: &mut Frame,
+    area: Rect,
+    df: &DataFrame,
+    config: &GridConfig,
+    state: &GridState,
 ) {
-    // For now, we'll just return a placeholder implementation
-    // This will be replaced with actual rendering logic in future work
+    // For now we'll just show a simple table with basic data display
+    // This will be improved to actually extract values from DataFrame in future
+
+    let mut rows = vec![];
+
+    // Add header row if enabled
+    if config.show_headers {
+        let headers: Vec<Cell> = df
+            .get_column_names()
+            .iter()
+            .map(|name| Cell::from(name.to_string()))
+            .collect();
+        rows.push(Row::new(headers).style(Style::default().fg(Color::Yellow)));
+    }
+
+    // Add data rows with placeholder values (will be replaced by real data extraction)
+    let max_rows = config.row_count.min(df.height());
+
+    for row_idx in state.offset..(state.offset + max_rows) {
+        if row_idx >= df.height() {
+            break;
+        }
+
+        let cells: Vec<Cell> = (0..df.width())
+            .map(|col_idx| {
+                // Just show placeholder data - actual implementation will extract real values
+                Cell::from(format!("row{}_col{}", row_idx, col_idx))
+            })
+            .collect();
+
+        rows.push(Row::new(cells));
+    }
+
+    // Create the table widget
+    let table = Table::new(rows, config.column_constraints.clone())
+        .block(Block::default().title("Data Grid").borders(Borders::ALL))
+        .style(Style::default().fg(Color::White))
+        .row_highlight_style(Style::default().bg(Color::Blue))
+        .highlight_symbol(">> ");
+
+    // Render the table
+    frame.render_widget(table, area);
+}
+
+/// Extract cell value as string for a specific row and column (placeholder)
+pub fn get_cell_value(_df: &DataFrame, _row_index: usize, _col_index: usize) -> String {
+    "N/A".to_string()
 }
