@@ -96,7 +96,7 @@ pub struct ColumnSchema {
 }
 
 /// Represents a transformation pipeline
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TransformationPipeline {
     pub name: String,
     pub steps: Vec<TransformationStep>,
@@ -170,12 +170,12 @@ impl TransformationPipeline {
 
     /// Rebuild schema from steps
     fn rebuild_schema(&mut self) -> Result<(), TransformationError> {
-        self.input_schema = Vec::new();
-        let mut current_schema = Vec::new();
-
         for step in &self.steps {
-            self.update_schema(step);
-            current_schema = step.output_schema.clone();
+            // Clone the schema we need to update
+            let step_schema = step.output_schema.clone();
+
+            // Update self's input schema
+            self.input_schema = step_schema;
         }
 
         Ok(())
@@ -264,22 +264,34 @@ impl TransformationPipeline {
             }
             StepType::FilterRows(column, condition) => {
                 // Parse condition and filter - simplified version for demo
-                let filter_column = column.clone();
+                let filter_column = column.as_str();
 
                 // Try to parse numeric comparison (simplified)
-                if let Some((col_name, op, value)) = Self::parse_condition(condition) {
+                if let Some((op, value)) = Self::parse_condition(condition) {
                     match op {
                         "gt" => df
-                            .filter(col(&filter_column).gt(lit(value)))
+                            .clone()
+                            .lazy()
+                            .filter(col(filter_column).gt(lit(value)))
+                            .collect()
                             .map_err(|e| TransformationError::DataError(e.to_string())),
                         "gte" => df
-                            .filter(col(&filter_column).gt_equal(lit(value)))
+                            .clone()
+                            .lazy()
+                            .filter(col(filter_column).gt_eq(lit(value)))
+                            .collect()
                             .map_err(|e| TransformationError::DataError(e.to_string())),
                         "lt" => df
-                            .filter(col(&filter_column).lt(lit(value)))
+                            .clone()
+                            .lazy()
+                            .filter(col(filter_column).lt(lit(value)))
+                            .collect()
                             .map_err(|e| TransformationError::DataError(e.to_string())),
                         "lte" => df
-                            .filter(col(&filter_column).lt_equal(lit(value)))
+                            .clone()
+                            .lazy()
+                            .filter(col(filter_column).lt_eq(lit(value)))
+                            .collect()
                             .map_err(|e| TransformationError::DataError(e.to_string())),
                         _ => Ok(df.clone()),
                     }
@@ -293,7 +305,7 @@ impl TransformationPipeline {
                 let mut lf = df.clone().lazy();
 
                 for group_col in group_columns {
-                    lf = lf.group_by([group_col]).agg(
+                    lf = lf.group_by([group_col.as_str()]).agg(
                         &aggregations
                             .iter()
                             .map(|agg| match agg.operation {
@@ -304,8 +316,8 @@ impl TransformationPipeline {
                                 AggregationOperation::Max => col(&agg.column).max(),
                                 AggregationOperation::First => col(&agg.column).first(),
                                 AggregationOperation::Last => col(&agg.column).last(),
-                                AggregationOperation::StdDev => col(&agg.column).std(None),
-                                AggregationOperation::Variance => col(&agg.column).var(None),
+                                AggregationOperation::StdDev => col(&agg.column).std(0),
+                                AggregationOperation::Variance => col(&agg.column).var(0),
                             })
                             .collect::<Vec<_>>(),
                     );
@@ -314,29 +326,37 @@ impl TransformationPipeline {
                 lf.collect()
                     .map_err(|e| TransformationError::DataError(e.to_string()))
             }
-            StepType::SortBy(columns, descending) => {
+            StepType::SortBy(columns, _descending) => {
                 let sort_columns: Vec<String> = columns.iter().cloned().collect();
-                let descending_bool = *descending;
 
-                df.sort(
-                    &sort_columns,
-                    SortMultipleOptions::default().with_order(if descending_bool {
-                        SortOrder::Desc
-                    } else {
-                        SortOrder::Asc
-                    }),
-                    None,
-                )
-                .map_err(|e| TransformationError::DataError(e.to_string()))
+                df.clone()
+                    .sort(&sort_columns, SortMultipleOptions::default())
+                    .map_err(|e| TransformationError::DataError(e.to_string()))
             }
-            StepType::RenameColumn(old_name, new_name) => df
-                .rename(old_name, new_name)
-                .map_err(|e| TransformationError::DataError(e.to_string())),
+            StepType::RenameColumn(old_name, new_name) => {
+                let mut result = df.clone();
+                // Use to_owned() and PlSmallStr::from instead of from_static
+                result
+                    .rename(old_name.as_str(), PlSmallStr::from(new_name.to_string()))
+                    .map_err(|e| TransformationError::DataError(e.to_string()))?;
+                Ok(result)
+            }
             StepType::DropColumns(columns) => {
                 let columns_to_drop: Vec<String> = columns.iter().cloned().collect();
 
-                df.drop(&columns_to_drop)
-                    .map_err(|e| TransformationError::DataError(e.to_string()))
+                if columns_to_drop.len() == 1 {
+                    df.clone()
+                        .drop(&columns_to_drop[0])
+                        .map_err(|e| TransformationError::DataError(e.to_string()))
+                } else {
+                    let mut result = df.clone();
+                    for col in &columns_to_drop {
+                        result
+                            .drop_in_place(col.as_str())
+                            .map_err(|e| TransformationError::DataError(e.to_string()))?;
+                    }
+                    Ok(result)
+                }
             }
             StepType::CustomSql(_) => {
                 // For now, we'll skip custom SQL implementation
@@ -346,31 +366,35 @@ impl TransformationPipeline {
                 // For now, we'll skip add column implementation
                 Ok(df.clone())
             }
-            StepType::RemoveDuplicates(keep_first) => if *keep_first {
-                df.unique(None, UniqueKeepStrategy::First)
-            } else {
-                df.unique(None, UniqueKeepStrategy::Last)
+            StepType::RemoveDuplicates(keep_first) => {
+                let strategy = if *keep_first {
+                    UniqueKeepStrategy::First
+                } else {
+                    UniqueKeepStrategy::Last
+                };
+                df.clone()
+                    .unique_stable(None, strategy, None)
+                    .map_err(|e| TransformationError::DataError(e.to_string()))
             }
-            .map_err(|e| TransformationError::DataError(e.to_string())),
         }
     }
 
     /// Parse a simple condition string into components
-    fn parse_condition(condition: &str) -> Option<(String, &'static str, f64)> {
+    fn parse_condition(condition: &str) -> Option<(&'static str, f64)> {
         let trimmed = condition.trim();
 
         // Try to match patterns like "> 1000", ">= 500", "< 100", etc.
         if let Some(num_str) = trimmed.strip_prefix("> ") {
-            return num_str.parse().ok().map(|v| ("gt".to_string(), v));
+            return num_str.parse().ok().map(|v| ("gt", v));
         }
         if let Some(num_str) = trimmed.strip_prefix(">= ") {
-            return num_str.parse().ok().map(|v| ("gte".to_string(), v));
+            return num_str.parse().ok().map(|v| ("gte", v));
         }
         if let Some(num_str) = trimmed.strip_prefix("< ") {
-            return num_str.parse().ok().map(|v| ("lt".to_string(), v));
+            return num_str.parse().ok().map(|v| ("lt", v));
         }
         if let Some(num_str) = trimmed.strip_prefix("<= ") {
-            return num_str.parse().ok().map(|v| ("lte".to_string(), v));
+            return num_str.parse().ok().map(|v| ("lte", v));
         }
 
         None
