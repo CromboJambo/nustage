@@ -61,7 +61,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Add group by transformation
     let group_step = TransformationFactory::group_by(
         "Group by Region".to_string(),
-        vec!["Region".to_string()],
         vec![nustage::transformations::Aggregation {
             column: "Sales".to_string(),
             operation: nustage::transformations::AggregationOperation::Sum,

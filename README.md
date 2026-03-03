@@ -51,7 +51,7 @@ Data Sources (CSV, Excel, Parquet, etc.)
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/nustage.git
+git clone https://github.com/crombojambo/nustage.git
 cd nustage
 
 # Build the project
@@ -368,5 +368,5 @@ For issues, questions, or contributions:
 
 **Version**: 0.1.0  
 **Status**: In Development (Stable build)  
-**Last Updated**: 2024
+**Last Updated**: 2026
 ```
