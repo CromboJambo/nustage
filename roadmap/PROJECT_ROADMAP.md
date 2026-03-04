@@ -19,6 +19,13 @@ The spreadsheet metaphor was co-opted by corporate interests. The alternate line
 4. **Terminal-First**: Keyboard-driven, lightweight, scriptable, and efficient
 5. **Sovereign Computation**: Local-first, version-controlled, and transparent
 
+### Piping Commands Over Ranges, Not Formulas in Cells
+This is the fundamental departure from Excel's legacy. Instead of cell-based formulas that are navigationally silent and break everything when moved:
+- Pipe commands over ranges: `data | filter "region='West'" | group "product"`
+- Range syntax with field awareness: `$field.revenue - $field.cost` or `$row.revenue - $row.cost`
+- Each pipeline step is visible, named, repeatable, and auditable
+- The tool exists because copy-paste-values-only from CSV export is rational behavior given current alternatives
+
 ### The "Cells Above the Grid" Architecture
 ```
 ┌─────────────────────────────────────┐
@@ -42,6 +49,19 @@ The spreadsheet metaphor was co-opted by corporate interests. The alternate line
 │  [Raw Data Grid]                     │
 └─────────────────────────────────────┘
 ```
+
+### The Witness Layer Distinction
+Nustage and Tabiew serve different purposes:
+- **Tabiew**: Grid viewing, inspection, cell-oriented navigation (the witness)
+- **Nustage**: Pipeline orchestration, transformation steps, reproducible workflows (the stage)
+This boundary should remain explicit to avoid accidentally rebuilding what already exists.
+
+### Domain Advantage: Hierarchical Cost Data
+The real edge is manufacturing cost data structures that Excel struggles with:
+- Bill of Materials: box in box in box hierarchies
+- Standard vs actual variance tracking
+- Multi-level rollups with clear provenance
+This is why copy-paste-values-only from CSV export is rational behavior today — the step-based model makes this accessible to accounting colleagues.
 
 ## Architecture
 
@@ -69,9 +89,11 @@ TUI/GUI Visualization
 - **State Management**: Custom reactive system for DAG state
 
 ### Optional Integrations
-- Nushell (for advanced scripting and macros)
 - VisiData (UX reference for terminal data tools)
-- Git integration (for version control)
+- IronCalc/Excel (as output format, not computational layer)
+- Calamine (reading Excel/CSV files as input sources)
+
+Note: Nushell integration is aspirational weight rather than core motivation. The goal is to make step-based pipelines accessible without requiring users to learn a new scripting language.
 
 ## Implementation Roadmap
 
@@ -105,16 +127,14 @@ TUI/GUI Visualization
 ### Phase 5: Advanced Features (Weeks 9-12)
 - [ ] Group and aggregate operations
 - [ ] Custom transform creation
-- [ ] Export capabilities
+- [ ] Export capabilities (Excel, CSV, Parquet, TSV)
 - [ ] Performance optimization
-- [ ] Git integration
+- [ ] Cell-oriented diff mode for version comparison
 
 ### Phase 6: Extensions (Weeks 13-16)
-- [ ] Custom expression language
-- [ ] Nushell scripting integration
-- [ ] WASM frontend support
+- [ ] Custom expression language with `$field` and `$row` syntax
+- [ ] Content-addressed sidecar files (hash-based identity)
 - [ ] Advanced visualization
-- [ ] Collaboration features
 
 ## Core Data Structures
 
@@ -199,6 +219,11 @@ data.csv |
 - Type inference and validation
 - Error messages that guide correct usage
 
+### 6. Export Format Flexibility
+- Excel as one output option among many (CSV, Parquet, TSV)
+- Cell-oriented diffs for change tracking across pipeline versions
+- Sidecar files with content-addressed identities (hash-based versioning)
+
 ## Technical Challenges
 
 1. **Expression Parser**: Need robust parsing for custom expression language
@@ -230,11 +255,15 @@ data.csv |
 
 ## Success Metrics
 
-- **Usability**: Can users perform common spreadsheet operations without learning curve
+### Success Metrics
+
+- **Usability**: Can accounting colleagues actually use the step-based model without reverting to copy-paste-values-only from CSV export
 - **Performance**: Handle datasets that would choke Excel
 - **Composability**: Operations are pure, reversible, and testable
 - **Sovereignty**: Local-first, version-controlled, and transparent
 - **Extensibility**: Easy to add new operations and integrations
+
+The north star: making the step-based model accessible enough that your accounting colleagues would actually use it instead of relying on CSV exports.
 
 ## The "Cells Above the Grid" Concept
 
@@ -283,13 +312,13 @@ This is not just a spreadsheet tool - it's a computational worldview that never 
 
 ## Next Steps
 
-1. Set up project structure with Rust + Polars + Ratatui
-2. Implement data loading and schema introspection
-3. Build DAG system and transform operations
-4. Create CLI interface
-5. Develop TUI visualization
-6. Implement composable operation builder
-7. Test with real-world datasets
-8. Gather feedback and iterate
-9. Build community and momentum
-10. Refine the vision based on usage
+### Next Steps
+
+1. **Compression before rebuild**: Throw away the Model<'static> lifetime hack, dummy cell rendering, placeholder Excel loader, .bak files — those are symptoms of building forward through uncertainty
+2. Set up project structure with Rust + Polars + Ratatui
+3. Implement data loading and schema introspection
+4. Build DAG system and transform operations
+5. Create CLI interface
+6. Develop TUI visualization
+7. Test with manufacturing cost data structures (BOM hierarchies, variance tracking)
+8. Make the step-based model accessible to accounting colleagues — that's the real test

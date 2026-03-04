@@ -13,22 +13,69 @@ Nustage is a terminal-first, staged data transformation layer that captures Powe
 - **Terminal-First UX**: Keyboard-driven, lightweight, scriptable
 - **Local-First**: Works entirely offline with no vendor lock-in
 
+### Piping Commands Over Ranges, Not Formulas in Cells
+This is the fundamental departure from Excel's legacy. Instead of cell-based formulas that are navigationally silent:
+- Pipe commands over ranges: `data | filter "region='West'" | group "product"`
+- Range syntax with field awareness: `$field.revenue - $field.cost` or `$row.revenue - $row.cost`
+- Each pipeline step is visible, named, repeatable, and auditable
+
+### The Witness Layer Distinction
+Nustage and Tabiew serve different purposes:
+- **Tabiew**: Grid viewing, inspection, cell-oriented navigation (the witness)
+- **Nustage**: Pipeline orchestration, transformation steps, reproducible workflows (the stage)
+This boundary should remain explicit to avoid accidentally rebuilding what already exists.
+
+### Domain Advantage: Hierarchical Cost Data
+The real edge is manufacturing cost data structures that Excel struggles with:
+- Bill of Materials: box in box in box hierarchies
+- Standard vs actual variance tracking
+- Multi-level rollups with clear provenance
+This is why copy-paste-values-only from CSV export is rational behavior today — the step-based model makes this accessible to accounting colleagues.
+
+### The North Star
+The tool exists because copy-paste-values-only from CSV export is rational behavior given current alternatives. The goal is to make the step-based model accessible enough that your accounting colleagues would actually use it. This is not about replacing Excel with a clone, but about making reproducible pipelines transparent and auditable.
+
 ## Architecture
 
+### The Nustage Pipe and Stage Model
 ```
-CodeTUI (Rust)
-  ↓
-Query AST builder (immutable steps)
-  ↓
-Expression parser (@field syntax)
-  ↓
-SQL generator (DuckDB backend)
-  ↓
-DuckDB (embedded, columnar, fast)
-  ↓
-Tabular result
-  ↓
-Grid renderer in TUI (Ratatui)
+┌─────────────────────────────────────┐
+│  Layer 1: Pipeline Definition        │  ← Named, repeatable steps
+│  ─────────────────────────────────   │
+│  data.csv | filter ... | group ...  │
+└─────────────────────────────────────┘
+              ↓ (deterministic execution)
+┌─────────────────────────────────────┐
+│  Layer 2: Transformation Engine      │  ← DuckDB backend, pure functions
+│  ─────────────────────────────────   │
+│  [Immutability guaranteed]           │
+└─────────────────────────────────────┘
+              ↓ (tabular result)
+┌─────────────────────────────────────┐
+│  Layer 3: Output Format Selection    │  ← Export to any grid format
+│  ─────────────────────────────────   │
+│  Excel | CSV | Parquet | TSV         │
+└─────────────────────────────────────┘
+```
+
+### The IronCalc Compatibility Layer
+IronCalc integration is not a shortcut — it's a compatibility layer:
+- **Read**: Open existing Excel/CSV files as input sources (read-only)
+- **Transform**: Data flows through immutable pipeline steps
+- **Export**: Return format of choice with cell-oriented diff tracking
+- The data never changes in the source; the Excel file is just a snapshot
+
+### Witness vs Stage Separation
+```
+┌───────────────┐     ┌──────────────────┐
+│   Tabiew      │     │    Nustage       │
+│  (Witness)    │     │    (Stage)       │
+├───────────────┤     ├──────────────────┤
+│ Grid viewing  │     │ Pipeline         │
+│ Inspection    │     │ Orchestration    │
+│ Cell nav      │     │ Transformations  │
+│ Diff view     │     │ Step history     │
+└───────────────┘     └──────────────────┘
 ```
 
 ## Tech Stack
@@ -36,18 +83,24 @@ Grid renderer in TUI (Ratatui)
 ### Core Components
 | Layer | Purpose | Candidate Tools / Crates |
 |-------|---------|--------------------------|
-| File Loader / I/O | Load spreadsheets, Parquet, CSV | Calamine (Excel/ODS), CSV/Parquet loaders |
-| Step Pipeline / Transform Model | Stepwise, immutable transformations | Internal Rust AST for transforms |
-| Expression Language | User-friendly formulas / filters | embed-nu → Nushell runtime |
+| File Loader / I/O | Load spreadsheets, Parquet, CSV as input sources | Calamine (Excel/ODS), CSV/Parquet loaders |
+| Step Pipeline / Transform Model | Named, repeatable, immutable transformations | Internal Rust AST for transforms |
+| Expression Language | Piping commands over ranges | Custom syntax with `$field` and `$row` accessors |
 | Execution Engine | Heavy-lifting analytics | DuckDB (embedded SQL engine) |
-| TUI / Grid | Preview and interact with data | VisiData, ratatui, or custom grid |
+| TUI / Grid | Preview and interact with data | Ratatui, custom grid renderer |
 | Autocomplete / Schema Awareness | Field discovery, formula assistance | Schema registry from loaded tables |
 | Step Editor / Sidebar | Show step history, reorder, delete | Immutable list UI in TUI |
+| Output Format Selection | Export to any grid format | IronCalc (Excel), CSV, Parquet, TSV writers |
 
-### Optional Integrations
+### Compatibility Layer
+- **IronCalc**: Read existing Excel files as input sources; export transformed data with cell-oriented diffs
+- **Calamine**: Reading Excel/CSV files as input sources (read-only)
+- The compatibility layer is not a shortcut — it's how Nustage speaks the language of existing workflows without adopting their computational model
+
+### Optional / Aspirational
 - **VisiData**: UX reference for terminal spreadsheet patterns
-- **Nushell**: For advanced transforms and scripting capabilities
-- **embed-nu**: For running Nushell scripts within the application
+- **Content-addressed sidecars**: Hash-based identity for pipeline definitions (long-term)
+- Note: Nushell integration is aspirational weight rather than core motivation. The goal is accessibility, not requiring users to learn a new scripting language
 
 ## MVP Requirements
 
@@ -72,12 +125,17 @@ Grid renderer in TUI (Ratatui)
 - [ ] Advanced transforms (joins, pivots, custom SQL)
 - [ ] Richer autocomplete with context awareness
 - [ ] Performance optimization for larger datasets
-- [ ] Export capabilities (CSV, Parquet, Excel)
-- [ ] Scripting via Nushell integration
+- [ ] Export capabilities (CSV, Parquet, Excel, TSV)
+- [ ] **Cell-oriented diff mode**: Compare pipeline versions at the cell level
+- [ ] **Hierarchical cost data support**: BOM hierarchies, standard vs actual variance tracking
+- [ ] Scripting via Nushell integration (aspirational weight, not core motivation)
 - [ ] Multiple file format support
-- [ ] Collaboration features (planned)
+- [ ] **Cell-oriented diff mode**: Compare pipeline versions at the cell level for auditable change tracking
 
 ## Key UX Features
+
+### North Star: Accessibility Over Replacement
+The tool exists because copy-paste-values-only from CSV export is rational behavior given current alternatives. The goal is to make the step-based model accessible enough that your accounting colleagues would actually use it — not about replacing Excel with a clone, but about making reproducible pipelines transparent and auditable in manufacturing cost contexts (BOM hierarchies, standard vs actual variance).
 
 ### 1. Field Awareness
 - Dropdown of available fields from current schema
@@ -85,8 +143,21 @@ Grid renderer in TUI (Ratatui)
 - Autocomplete in expression editor
 - Field type information display
 
-### 2. Stationary Filters (Slicer/Timeline Style)
-Stationary filters are persistent UI elements that apply ad-hoc filtering without creating new steps:
+### 6. Cell-Oriented Diff Mode
+Compare pipeline versions at the cell level:
+- Side-by-side view of transformed vs source data
+- Highlight changes between pipeline iterations
+- Export diff reports for audit trails
+- Content-addressed sidecar files (hash-based identity) enable stable version comparison
+
+### 7. Stationary Filters (Slicer/Timeline Style)
+Stationary filters are persistent UI elements that apply ad-hoc filtering without creating new steps. The witness layer (Tabiew) handles this, while Nustage focuses on the stage (pipelines).
+
+### 8. Content-Addressed Sidecars
+Long-term vision for pipeline versioning:
+- Hash as stable identity for pipeline definitions
+- Embed distance for traversal between versions
+- Make the "archaeological evidence" in your file tree intentional and navigable
 
 **UI Pattern:**
 ```
@@ -306,7 +377,7 @@ WHERE (Region IN ('North', 'South'))
   AND (@Amt > 0)
 ```
 
-### 7. Column Management & Rendering
+### 9. Column Management & Rendering
 - **Soft-Width Columns**: Variable-width column sizing with line-break tolerance
 - **Column Hats**: Dynamic semantic keys inferred from data patterns
 - **Schema Persistence**: TOML-based schema storage for versionable transformations
