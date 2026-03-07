@@ -6,6 +6,8 @@
 pub mod cli;
 pub mod data;
 pub mod ironcalc;
+pub mod mcode;
+pub mod sidecar;
 pub mod transformations;
 pub mod tui_grid;
 
@@ -17,6 +19,18 @@ pub use ironcalc::{
     Transformation, apply_transformation, get_field_names, get_resolved_value,
     load_dataframe_to_ironcalc,
 };
+pub use mcode::generate_m_code;
+pub use sidecar::{AggOperation, SidecarError, SidecarFile, StepType as SidecarStepType};
+
+// Re-export commonly used types for convenience
+pub use cli::Cli;
+pub use data::{ColumnSchema, PipelineError, get_schema, load_data};
+pub use ironcalc::{
+    IronCalcError, IronCalcIntegration, SpreadsheetCell, SpreadsheetColumn, SpreadsheetRow,
+    Transformation, apply_transformation, get_field_names, get_resolved_value,
+    load_dataframe_to_ironcalc,
+};
+
 pub use transformations::{
     Aggregation, AggregationOperation, ColumnSchema as TransformColumnSchema, StepType,
     TransformationError, TransformationFactory, TransformationPipeline, TransformationStep,
