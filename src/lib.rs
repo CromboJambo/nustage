@@ -20,16 +20,7 @@ pub use ironcalc::{
     load_dataframe_to_ironcalc,
 };
 pub use mcode::generate_m_code;
-pub use sidecar::{AggOperation, SidecarError, SidecarFile, StepType as SidecarStepType};
-
-// Re-export commonly used types for convenience
-pub use cli::Cli;
-pub use data::{ColumnSchema, PipelineError, get_schema, load_data};
-pub use ironcalc::{
-    IronCalcError, IronCalcIntegration, SpreadsheetCell, SpreadsheetColumn, SpreadsheetRow,
-    Transformation, apply_transformation, get_field_names, get_resolved_value,
-    load_dataframe_to_ironcalc,
-};
+pub use sidecar::{SidecarError, SidecarFile, SidecarMetadata};
 
 pub use transformations::{
     Aggregation, AggregationOperation, ColumnSchema as TransformColumnSchema, StepType,

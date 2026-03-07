@@ -1,69 +1,51 @@
 //! PowerQuery M Code Generator
 //!
-//! Converts Nustage transformation steps into Excel PowerQuery M language
+//! Converts canonical Nustage transformation steps into Power Query M.
 
-use crate::transformations::{StepType, TransformationStep};
-use serde_json::Value;
+use crate::data::ColumnSchema;
+use crate::transformations::{Aggregation, AggregationOperation, StepType, TransformationStep};
+use std::collections::{HashMap, HashSet};
 
-/// Generate M code from a single transformation step
-pub fn step_to_m(step: &TransformationStep) -> Result<String, String> {
+/// Generate M code from a single transformation step.
+pub fn step_to_m(step: &TransformationStep, input_name: &str) -> Result<String, String> {
     match &step.step_type {
         StepType::SelectColumns(columns) => Ok(format!(
-            "Table.SelectColumns(Source, {{ {} }})",
+            "Table.SelectColumns({}, {{{}}})",
+            input_name,
             columns
                 .iter()
-                .map(|c| format!("\"{}\"", c))
+                .map(|c| format!("\"{}\"", escape_m_string(c)))
                 .collect::<Vec<_>>()
                 .join(", ")
         )),
-
-        StepType::FilterRows(column, condition) => {
-            let m_condition = parse_condition_to_m(column, condition)?;
-            Ok(format!("Table.SelectRows(Source, each {})", m_condition))
-        }
-
-        StepType::GroupBy(columns, aggregations) => {
-            let group_cols = columns
+        StepType::FilterRows(column, condition) => Ok(format!(
+            "Table.SelectRows({}, each {})",
+            input_name,
+            parse_condition_to_m(column, condition)?
+        )),
+        StepType::GroupBy(columns, aggregations) => Ok(format!(
+            "Table.Group({}, {{{}}}, {{{}}})",
+            input_name,
+            columns
                 .iter()
-                .map(|c| format!("\"{}\"", c))
+                .map(|c| format!("\"{}\"", escape_m_string(c)))
                 .collect::<Vec<_>>()
-                .join(", ");
-
-            let agg_table = aggregations
+                .join(", "),
+            aggregations
                 .iter()
-                .map(|agg| {
-                    let op = match &agg.operation {
-                        crate::transformations::AggregationOperation::Sum => "List.Sum",
-                        crate::transformations::AggregationOperation::Mean => "List.Average",
-                        crate::transformations::AggregationOperation::Count => "List.Count",
-                        crate::transformations::AggregationOperation::Min => "List.Min",
-                        crate::transformations::AggregationOperation::Max => "List.Max",
-                        crate::transformations::AggregationOperation::First => "List.First",
-                        crate::transformations::AggregationOperation::Last => "List.Last",
-                        crate::transformations::AggregationOperation::StdDev => {
-                            "List.StandardDeviation"
-                        }
-                        crate::transformations::AggregationOperation::Variance => "List.Variance",
-                    };
-
-                    format!("[{}] = {}([{}])", agg.column, op, agg.column)
-                })
-                .collect::<Vec<_>>()
-                .join(", ");
-
-            Ok(format!(
-                "Table.Group(Source, {{ {} }}, {{ {} }})",
-                group_cols, agg_table
-            ))
-        }
-
-        StepType::SortBy(columns, descending) => {
-            let sort_specs = columns
+                .map(aggregation_to_m)
+                .collect::<Result<Vec<_>, _>>()?
+                .join(", ")
+        )),
+        StepType::SortBy(columns, descending) => Ok(format!(
+            "Table.Sort({}, {{{}}})",
+            input_name,
+            columns
                 .iter()
                 .map(|c| {
                     format!(
                         "{{\"{}\", Order.{}}}",
-                        c,
+                        escape_m_string(c),
                         if *descending {
                             "Descending"
                         } else {
@@ -72,143 +54,83 @@ pub fn step_to_m(step: &TransformationStep) -> Result<String, String> {
                     )
                 })
                 .collect::<Vec<_>>()
-                .join(", ");
-
-            Ok(format!("Table.Sort(Source, {{ {} }})", sort_specs))
-        }
-
-        StepType::RenameColumn(old_name, new_name) => Ok(format!(
-            "Table.RenameColumns(Source, {{{{\"{}\", \"{}\"}}}})",
-            old_name, new_name
+                .join(", ")
         )),
-
-        StepType::DropColumns(columns) => {
-            let drop_cols = columns
+        StepType::RenameColumn(old_name, new_name) => Ok(format!(
+            "Table.RenameColumns({}, {{{{\"{}\", \"{}\"}}}})",
+            input_name,
+            escape_m_string(old_name),
+            escape_m_string(new_name)
+        )),
+        StepType::DropColumns(columns) => Ok(format!(
+            "Table.RemoveColumns({}, {{{}}})",
+            input_name,
+            columns
                 .iter()
-                .map(|c| format!("\"{}\"", c))
+                .map(|c| format!("\"{}\"", escape_m_string(c)))
                 .collect::<Vec<_>>()
-                .join(", ");
-
-            Ok(format!("Table.RemoveColumns(Source, {{ {} }})", drop_cols))
-        }
-
-        StepType::CustomSql(sql) => {
-            // Custom SQL - convert to M if needed or wrap as text
-            Err(format!(
-                "Custom SQL step requires manual M conversion: {}",
-                sql
-            ))
-        }
-
-        StepType::AddColumn(name, expr) => {
-            let m_expr = transform_expression_to_m(expr)?;
-            Ok(format!(
-                "Table.AddColumn(Source, \"{}\", each {})",
-                name, m_expr
-            ))
-        }
-
-        StepType::RemoveDuplicates(columns) => {
-            if columns.is_empty() {
-                Ok("Table.Distinct(Source)".to_string())
+                .join(", ")
+        )),
+        StepType::CustomSql(sql) => Err(format!(
+            "Custom SQL step requires manual Power Query translation: {}",
+            sql
+        )),
+        StepType::AddColumn(name, expr) => Ok(format!(
+            "Table.AddColumn({}, \"{}\", each {})",
+            input_name,
+            escape_m_string(name),
+            transform_expression_to_m(expr)?
+        )),
+        StepType::RemoveDuplicates(all_columns) => {
+            if *all_columns {
+                Ok(format!("Table.Distinct({})", input_name))
             } else {
-                let dup_cols = columns
-                    .iter()
-                    .map(|c| format!("\"{}\"", c))
-                    .collect::<Vec<_>>()
-                    .join(", ");
-
-                Ok(format!(
-                    "Table.Distinct(Source, EquivalenceCriteria.FromColumns({}))",
-                    dup_cols
-                ))
+                Err("Column-scoped duplicate removal is not represented in the canonical step model"
+                    .to_string())
             }
         }
     }
 }
 
-/// Parse a condition and convert to M language
-fn parse_condition_to_m(column: &str, condition: &str) -> Result<String, String> {
-    // Simple condition parsing for common patterns
-    let parts: Vec<&str> = condition.split_whitespace().collect();
-
-    if parts.len() < 3 {
-        return Err(format!("Invalid condition format: {}", condition));
-    }
-
-    let col = parts[0];
-    let op = parts[1];
-    let value = parts[2..].join(" ");
-
-    // Map operators to M equivalents
-    let m_op = match op {
-        ">" => ">",
-        ">=" => ">=",
-        "<" => "<",
-        "<=" => "<=",
-        "=" | "==" => "=",
-        "!=" | "<>" => "<>",
-        "in" => "List.Contains({})",
-        "contains" => "Text.Contains",
-        _ => return Err(format!("Unsupported operator: {}", op)),
-    };
-
-    // Determine value type and format accordingly
-    let formatted_value = if value.starts_with('"') {
-        // Already a string literal in M syntax
-        value.trim_matches('"').to_string()
-    } else if value.parse::<f64>().is_ok() || value.parse::<i64>().is_ok() {
-        // Numeric - no quotes needed
-        value
-    } else {
-        // String - add quotes
-        format!("\"{}\"", value.trim_matches('"'))
-    };
-
-    match op {
-        "in" => Ok(format!(m_op, formatted_value)),
-        "contains" => Ok(format!("Text.Contains([{}], {})", col, formatted_value)),
-        _ => Ok(format!("[{}] {} {}", col, m_op, formatted_value)),
-    }
-}
-
-/// Transform an expression to M language (e.g., @Revenue - @Cost)
-fn transform_expression_to_m(expr: &str) -> Result<String, String> {
-    // Replace field references from Rust syntax (@Field) to M syntax ([Field])
-    let m_expr = expr.replace('@', "[");
-
-    Ok(m_expr)
-}
-
-/// Generate complete M code for a pipeline
+/// Generate complete M code for a pipeline.
 pub fn generate_m_code(pipeline: &[TransformationStep], source_name: &str) -> String {
-    let mut steps: Vec<String> = vec![];
+    let mut bindings = vec![format!("Source = {}", source_name)];
+    let mut last_name = "Source".to_string();
 
-    // Start with the source
-    steps.push(format!("let Source = {} in", source_name));
-
-    // Add each transformation step
-    for step in pipeline {
-        if let Ok(m_step) = step_to_m(step) {
-            steps.push(m_step);
-        } else {
-            eprintln!("Warning: Could not convert step '{}' to M code", step.name);
+    for (index, step) in pipeline.iter().enumerate() {
+        let binding_name = step_binding_name(index, &step.name);
+        match step_to_m(step, &last_name) {
+            Ok(expr) => {
+                bindings.push(format!("{} = {}", binding_name, expr));
+                last_name = binding_name;
+            }
+            Err(err) => {
+                bindings.push(format!(
+                    "{} = {} /* skipped: {} */",
+                    binding_name, last_name, err
+                ));
+                last_name = binding_name;
+            }
         }
     }
 
-    steps.join("\n  ")
+    format!(
+        "let\n    {}\nin\n    {}",
+        bindings.join(",\n    "),
+        last_name
+    )
 }
 
-/// Generate a human-readable diff between original and transformed data
+/// Generate a human-readable diff between original and transformed data.
 pub fn generate_diff(
-    original_schema: &[crate::data::ColumnSchema],
-    transformed_schema: &[crate::data::ColumnSchema],
+    original_schema: &[ColumnSchema],
+    transformed_schema: &[ColumnSchema],
 ) -> String {
     let mut lines = vec![String::from("=== Schema Changes ===")];
 
-    // Find removed columns
-    let original_names: std::collections::HashSet<&str> =
-        original_schema.iter().map(|c| c.name.as_str()).collect();
+    let original_names: HashSet<&str> = original_schema.iter().map(|c| c.name.as_str()).collect();
+    let transformed_names: HashSet<&str> =
+        transformed_schema.iter().map(|c| c.name.as_str()).collect();
 
     for transformed in transformed_schema {
         if !original_names.contains(transformed.name.as_str()) {
@@ -216,28 +138,23 @@ pub fn generate_diff(
         }
     }
 
-    // Find new columns that weren't there before
-    let transformed_names: std::collections::HashSet<&str> =
-        transformed_schema.iter().map(|c| c.name.as_str()).collect();
-
     for original in original_schema {
         if !transformed_names.contains(original.name.as_str()) {
             lines.push(format!("  - Removed column: {}", original.name));
         }
     }
 
-    // Find type changes
-    let orig_map: std::collections::HashMap<&str, &str> = original_schema
+    let original_types: HashMap<&str, &str> = original_schema
         .iter()
         .map(|c| (c.name.as_str(), c.data_type.as_str()))
         .collect();
 
     for transformed in transformed_schema {
-        if let Some(orig) = orig_map.get(transformed.name.as_str()) {
-            if orig != &transformed.data_type[..] {
+        if let Some(original_type) = original_types.get(transformed.name.as_str()) {
+            if *original_type != transformed.data_type.as_str() {
                 lines.push(format!(
                     "  ~ Type changed: {} from {} to {}",
-                    transformed.name, orig, transformed.data_type
+                    transformed.name, original_type, transformed.data_type
                 ));
             }
         }
@@ -246,37 +163,220 @@ pub fn generate_diff(
     lines.join("\n")
 }
 
+fn aggregation_to_m(aggregation: &Aggregation) -> Result<String, String> {
+    let function_name = match aggregation.operation {
+        AggregationOperation::Sum => "List.Sum",
+        AggregationOperation::Mean => "List.Average",
+        AggregationOperation::Count => "List.Count",
+        AggregationOperation::Min => "List.Min",
+        AggregationOperation::Max => "List.Max",
+        AggregationOperation::First => "List.First",
+        AggregationOperation::Last => "List.Last",
+        AggregationOperation::StdDev => "List.StandardDeviation",
+        AggregationOperation::Variance => "List.Variance",
+    };
+
+    let label = format!("{:?}_{}", aggregation.operation, aggregation.column);
+    Ok(format!(
+        "{{\"{}\", each {}([{}])}}",
+        escape_m_string(&label),
+        function_name,
+        aggregation.column
+    ))
+}
+
+/// Parse a condition and convert it to M.
+fn parse_condition_to_m(column: &str, condition: &str) -> Result<String, String> {
+    let trimmed = condition.trim();
+    let operators = [
+        ">=", "<=", "!=", "<>", "==", "=", ">", "<", "contains", "in",
+    ];
+
+    let matched = operators
+        .iter()
+        .find_map(|op| trimmed.strip_prefix(op).map(|rest| (*op, rest.trim())));
+
+    let (operator, raw_value) = matched.ok_or_else(|| {
+        format!(
+            "Unsupported condition format for column '{}': {}",
+            column, condition
+        )
+    })?;
+
+    let value = format_m_value(raw_value);
+    let escaped_column = escape_m_identifier(column);
+
+    match operator {
+        "contains" => Ok(format!("Text.Contains([{}], {})", escaped_column, value)),
+        "in" => Ok(format!("List.Contains({}, [{}])", value, escaped_column)),
+        "==" => Ok(format!("[{}] = {}", escaped_column, value)),
+        "!=" => Ok(format!("[{}] <> {}", escaped_column, value)),
+        "<>" => Ok(format!("[{}] <> {}", escaped_column, value)),
+        _ => Ok(format!("[{}] {} {}", escaped_column, operator, value)),
+    }
+}
+
+/// Transform an expression to M language, converting `@Field` to `[Field]`.
+fn transform_expression_to_m(expr: &str) -> Result<String, String> {
+    let mut result = String::with_capacity(expr.len());
+    let chars: Vec<char> = expr.chars().collect();
+    let mut index = 0;
+
+    while index < chars.len() {
+        if chars[index] == '@' {
+            index += 1;
+            let start = index;
+            while index < chars.len() && (chars[index].is_alphanumeric() || chars[index] == '_') {
+                index += 1;
+            }
+
+            let field = chars[start..index]
+                .iter()
+                .collect::<String>()
+                .trim()
+                .to_string();
+            if field.is_empty() {
+                return Err(format!("Invalid field reference in expression: {}", expr));
+            }
+
+            result.push('[');
+            result.push_str(&field);
+            result.push(']');
+            continue;
+        }
+
+        result.push(chars[index]);
+        index += 1;
+    }
+
+    Ok(result)
+}
+
+fn format_m_value(raw_value: &str) -> String {
+    let trimmed = raw_value.trim();
+    if trimmed.starts_with('[') && trimmed.ends_with(']') {
+        let inner = &trimmed[1..trimmed.len() - 1];
+        let values = inner
+            .split(',')
+            .map(|part| format_m_value(part.trim()))
+            .collect::<Vec<_>>()
+            .join(", ");
+        format!("{{{}}}", values)
+    } else if trimmed.starts_with('"') && trimmed.ends_with('"') && trimmed.len() >= 2 {
+        format!("\"{}\"", escape_m_string(&trimmed[1..trimmed.len() - 1]))
+    } else if trimmed.parse::<f64>().is_ok()
+        || trimmed.eq_ignore_ascii_case("true")
+        || trimmed.eq_ignore_ascii_case("false")
+        || trimmed.eq_ignore_ascii_case("null")
+    {
+        trimmed.to_string()
+    } else {
+        format!("\"{}\"", escape_m_string(trimmed.trim_matches('\'')))
+    }
+}
+
+fn escape_m_string(input: &str) -> String {
+    input.replace('"', "\"\"")
+}
+
+fn escape_m_identifier(input: &str) -> String {
+    input.to_string()
+}
+
+fn step_binding_name(index: usize, name: &str) -> String {
+    let sanitized: String = name
+        .chars()
+        .map(|c| if c.is_alphanumeric() { c } else { '_' })
+        .collect();
+    let trimmed = sanitized.trim_matches('_');
+    if trimmed.is_empty() {
+        format!("Step{}", index + 1)
+    } else {
+        format!("Step{}_{}", index + 1, trimmed)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::transformations::{Aggregation, AggregationOperation};
 
+    fn base_step(step_type: StepType) -> TransformationStep {
+        TransformationStep {
+            id: "test".to_string(),
+            name: "step".to_string(),
+            step_type,
+            parameters: HashMap::new(),
+            output_schema: vec![],
+        }
+    }
+
     #[test]
     fn test_filter_to_m() {
-        let step = TransformationStep {
-            id: "test".to_string(),
-            name: "filter".to_string(),
-            step_type: StepType::FilterRows("Revenue".to_string(), "> 1000".to_string()),
-            parameters: Value::Null,
-            output_schema: vec![],
-        };
+        let step = base_step(StepType::FilterRows(
+            "Revenue".to_string(),
+            "> 1000".to_string(),
+        ));
 
-        let m = step_to_m(&step).unwrap();
+        let m = step_to_m(&step, "Source").unwrap();
         assert!(m.contains("Table.SelectRows"));
         assert!(m.contains("[Revenue] > 1000"));
     }
 
     #[test]
     fn test_select_to_m() {
-        let step = TransformationStep {
-            id: "test".to_string(),
-            name: "select".to_string(),
-            step_type: StepType::SelectColumns(vec!["Name".to_string(), "Revenue".to_string()]),
-            parameters: Value::Null,
-            output_schema: vec![],
-        };
+        let step = base_step(StepType::SelectColumns(vec![
+            "Name".to_string(),
+            "Revenue".to_string(),
+        ]));
 
-        let m = step_to_m(&step).unwrap();
+        let m = step_to_m(&step, "Source").unwrap();
         assert!(m.contains("Table.SelectColumns"));
+        assert!(m.contains("\"Name\""));
+    }
+
+    #[test]
+    fn test_add_column_expression_to_m() {
+        let step = base_step(StepType::AddColumn(
+            "Margin".to_string(),
+            "@Revenue - @Cost".to_string(),
+        ));
+
+        let m = step_to_m(&step, "Source").unwrap();
+        assert!(m.contains("[Revenue] - [Cost]"));
+    }
+
+    #[test]
+    fn test_group_by_to_m() {
+        let step = base_step(StepType::GroupBy(
+            vec!["Region".to_string()],
+            vec![Aggregation {
+                column: "Revenue".to_string(),
+                operation: AggregationOperation::Sum,
+            }],
+        ));
+
+        let m = step_to_m(&step, "Source").unwrap();
+        assert!(m.contains("Table.Group"));
+        assert!(m.contains("List.Sum"));
+    }
+
+    #[test]
+    fn test_generate_m_code_pipeline() {
+        let pipeline = vec![
+            base_step(StepType::FilterRows(
+                "Revenue".to_string(),
+                "> 1000".to_string(),
+            )),
+            base_step(StepType::SortBy(vec!["Revenue".to_string()], true)),
+        ];
+
+        let m = generate_m_code(
+            &pipeline,
+            "Excel.CurrentWorkbook(){[Name=\"Table1\"]}[Content]",
+        );
+        assert!(m.starts_with("let"));
+        assert!(m.contains("Step1_step"));
+        assert!(m.contains("in"));
     }
 }
