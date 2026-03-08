@@ -158,8 +158,5 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    println!("TUI mode - File path received: {}", cli.input.display());
-
-    // Run the TUI application
     run()
 }
