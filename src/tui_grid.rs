@@ -77,7 +77,6 @@ pub fn render_grid_display(
     config: &GridConfig,
     state: &GridState,
 ) {
-    // Create rows for the table - we'll just show some placeholder data to avoid complex type checking
     let mut rows = vec![];
 
     // Add header row if enabled
@@ -90,7 +89,7 @@ pub fn render_grid_display(
         rows.push(Row::new(headers).style(Style::default().fg(Color::Yellow)));
     }
 
-    // Add data rows (using simple placeholder approach)
+    // Add data rows with actual values
     let max_rows = config.row_count.min(df.height());
 
     for row_idx in state.offset..(state.offset + max_rows) {
@@ -98,7 +97,19 @@ pub fn render_grid_display(
             break;
         }
 
-        let cells: Vec<Cell> = vec!["dummy".to_string().into(); df.width()];
+        let cells: Vec<Cell> = (0..df.width())
+            .map(|col_idx| {
+                let col_name = df.get_column_names()[col_idx];
+                match df.column(col_name) {
+                    Ok(series) => series
+                        .get(row_idx)
+                        .map(|av| av.to_string().into())
+                        .unwrap_or(Cell::from("")),
+                    Err(_) => Cell::from(""),
+                }
+            })
+            .collect();
+
         rows.push(Row::new(cells));
     }
 
@@ -113,9 +124,17 @@ pub fn render_grid_display(
     frame.render_widget(table, area);
 }
 
-/// Extract cell value as string for a specific row and column (placeholder)
-pub fn get_cell_value(_df: &DataFrame, _row_index: usize, _col_index: usize) -> String {
-    "N/A".to_string()
+/// Extract cell value as string for a specific row and column
+pub fn get_cell_value(df: &DataFrame, _row_index: usize, col_index: usize) -> String {
+    let col_name = df.get_column_names()[col_index];
+
+    match df.column(col_name) {
+        Ok(series) => series
+            .get(_row_index)
+            .map(|av| strip_quotes(&av.to_string()))
+            .unwrap_or_default(),
+        Err(_) => String::new(),
+    }
 }
 
 /// Calculate the current view window for grid display
@@ -123,4 +142,53 @@ pub fn calculate_view_window(df: &DataFrame, state: &GridState, max_rows: usize)
     let start_row = state.offset;
     let end_row = (start_row + max_rows).min(df.height());
     (start_row, end_row)
+}
+
+/// Get all cell values for a row as strings
+pub fn get_row_values(df: &DataFrame, row_index: usize) -> Vec<String> {
+    (0..df.width())
+        .map(|col_idx| {
+            let col_name = df.get_column_names()[col_idx];
+
+            match df.column(col_name) {
+                Ok(series) => series
+                    .get(row_index)
+                    .map(|av| strip_quotes(&av.to_string()))
+                    .unwrap_or_default(),
+                Err(_) => String::new(),
+            }
+        })
+        .collect()
+}
+
+/// Strip surrounding quotes from string representations
+fn strip_quotes(s: &str) -> String {
+    s.trim_matches('"').trim_matches('\'').to_string()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_get_row_values() {
+        let a: Column = Series::new("A".into(), &[1i32, 2, 3]).into();
+        let b: Column = Series::new("B".into(), &["x", "y", "z"]).into();
+        let df = DataFrame::new(3, vec![a, b]).unwrap();
+
+        let values = get_row_values(&df, 0);
+        assert_eq!(values.len(), 2);
+        assert_eq!(values[0], "1");
+        assert_eq!(values[1], "x");
+    }
+
+    #[test]
+    fn test_get_cell_value() {
+        let a: Column = Series::new("A".into(), &[1i32, 2, 3]).into();
+        let b: Column = Series::new("B".into(), &["x", "y", "z"]).into();
+        let df = DataFrame::new(3, vec![a, b]).unwrap();
+
+        assert_eq!(get_cell_value(&df, 0, 0), "1");
+        assert_eq!(get_cell_value(&df, 1, 1), "y");
+    }
 }
