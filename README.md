@@ -163,14 +163,22 @@ The grid is Tabiew's job. Nustage shows pipeline state.
 
 ---
 
+## ✅ Demo Status: READY
+
+The project has been fixed and is now demo-ready:
+
+- **Main CLI binary** — Updated with `--tui` flag support for interactive mode
+- **Data loading** — CSV and Parquet files work reliably  
+- **Example** — `simple_demo` runs successfully with sample data
+- **All tests** — Pass cleanly
+- **Release build** — Compiles without errors
+
 ## What To Build Next (Prioritized)
 
-1. **Real cell rendering in tui_grid.rs** — actual data, not placeholders
-2. **Fix Model lifetime in ironcalc/mod.rs** — `'static` is wrong, scope it properly  
-3. **Real Excel loader in data/mod.rs** — replace empty DataFrame placeholder
-4. **Step list panel in TUI** — the thing that makes Nustage distinct from Tabiew
-5. **Sidecar read/write** — serialize/deserialize pipeline to `.nustage.json`
-6. **SQL transparency** — show generated DuckDB query per step
+1. **Fix Excel loader** — Excel support requires manual conversion to CSV for demo
+2. **Step list panel in TUI** — Add named steps to the witness layer (not yet built)
+3. **Sidecar read/write** — Implement pipeline serialization to `.nustage.json`
+4. **SQL transparency** — Show generated DuckDB queries per step
 
 Everything else is future.
 
@@ -193,9 +201,29 @@ Everything else is future.
 # Build from source
 cargo build --release
 
-# Run with a data file
+# Run with a CSV data file (CSV and Parquet recommended for demo)
 ./target/release/nustage test_data/sales.csv
 
-# Or run the TUI version
+# Run with Parquet file
+./target/release/nustage test_data/*.parquet
+
+# Run the TUI version (requires terminal)
 ./target/release/nustage --tui test_data/sales.csv
+```
+
+### Demo Examples
+
+```bash
+# Run the simple demo example
+cargo run --release --example simple_demo
+
+# Run the IronCalc integration example
+cargo run --release --example ironcalc_integration
+```
+
+### Unit Tests
+
+```bash
+# Run all tests
+cargo test --release
 ```
