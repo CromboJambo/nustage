@@ -117,6 +117,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Step 5: Save to Excel file
     println!("\n5. Saving to Excel file...");
     let output_path = "example_output.xlsx";
+
+    // Remove existing file if it exists (demo mode)
+    if std::path::Path::new(output_path).exists() {
+        let _ = std::fs::remove_file(output_path);
+        println!("   Removed existing file: {}", output_path);
+    }
+
     ironcalc.save(output_path)?;
     println!("   Workbook saved to: {}", output_path);
 
