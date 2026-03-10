@@ -2,339 +2,309 @@
 
 ## Overview
 
-This document describes the integration between **IronCalc** (spreadsheet engine) and **nustage** (Power Query-style data transformation layer). This combination creates a terminal-native spreadsheet solution with powerful data manipulation capabilities.
+**Version:** 0.1.2 — First honest public release
+
+This document describes the IronCalc compatibility layer integration with Nustage. This provides read-only Excel support without claiming full spreadsheet engine capabilities.
+
+## Current Status
+
+### Implemented ✅
+
+- **Read-only Excel support** — IronCalc can load .xlsx files as input sources
+- **Schema introspection** — Field names and types available for transformations
+- **Data loading pipeline** — CSV → Polars → transformation → output
+
+### Aspirational / Not Yet Implemented ⏳
+
+- **Spreadsheet UI rendering** — Grid viewing handled by Tabiew (external tool)
+- **Cell-based formula evaluation** — Not part of core Nustage model
+- **Data persistence** — Transformed data exported, not persisted in Excel sheets
+- **Cell formatting and styling** — Export formatting only
+- **Grid-based interface operations** — Nustage is pipeline-focused, not grid-focused
 
 ## Architecture
 
 ```
-IronCalc (UI & Spreadsheet Engine)
+IronCalc Compatibility Layer (Read-Only)
   ↓
 Nustage (Power Query Layer)
   ↓
 DuckDB (Data Processing)
   ↓
 Data Sources (CSV, Excel, Parquet, etc.)
+  ↓
+Output (CSV, Parquet, Excel, TSV)
 ```
 
 ## How It Works
 
-### 1. IronCalc as the Spreadsheet Engine
+### 1. IronCalc as the Compatibility Layer
 
-IronCalc handles:
-- Spreadsheet UI rendering and navigation
-- Cell-based formula evaluation
-- Data persistence (.xlsx, .xls formats)
-- Cell formatting and styling
-- Grid-based interface operations
+IronCalc is used for:
+- **Read operations only** — Open existing Excel/CSV files as input sources
+- **Data extraction** — Convert Excel sheets to Polars DataFrames
+- **Export format** — Save transformed data back to Excel format
 
-### 2. Nustage as the Power Query Layer
+**Note:** IronCalc is not the computational layer. Data never mutates in source files.
+
+### 2. Nustage as the Core Engine
 
 Nustage provides:
-- Step-based data transformation model
-- Schema-aware data loading
-- Transformation pipeline management
-- DuckDB-powered data processing
-- Reversible, immutable transformations
+- Step-based data transformation model (implemented)
+- Schema-aware data loading (implemented)
+- Transformation pipeline management (implemented)
+- DuckDB-powered data processing (implemented)
+- Reversible, immutable transformations (implemented)
 
 ### 3. Integration Points
 
 #### Data Loading
 
 ```rust
-// Nustage loads data into IronCalc
-let df = load_data("data.xlsx")?;
-model.load_data_frame(df)?;
+// Load from CSV (recommended for demo)
+let df = DataFrame::from_csv("data.csv")?;
+
+// Load from Parquet (full support)
+let df = DataFrame::from_parquet("data.parquet")?;
+
+// Load from Excel via IronCalc (read-only support)
+// Currently aspirational — see limitations below
 ```
 
 #### Transformation Pipeline
 
 ```rust
-// Nustage manages transformation steps
-add_filter_step("Amount > 1000")?;
-add_select_columns(["Product", "Region", "Date"])?;
-add_group_by("Region", ["TotalSales", "AvgPrice"])?;
+// Core transformations are implemented:
+let pipeline = TransformationPipeline::new("Analysis");
+
+// Filter (implemented)
+pipeline.add_step(TransformationFactory::filter_rows("Amount", "> 1000")?);
+
+// Add Column (implemented)
+pipeline.add_step(TransformationFactory::add_column("Profit", "@Amount - @Cost")?);
+
+// Group By (implemented)
+pipeline.add_step(TransformationFactory::group_by("Region")?);
+
+// Select Columns (implemented)
+pipeline.add_step(TransformationFactory::select_columns(vec!["Product", "Region"])?);
+
+// Sort (implemented)
+pipeline.add_step(TransformationFactory::sort_by("Amount", true)?);
 ```
 
 #### Schema Awareness
 
-- Autocomplete for field names
+**Implemented:**
+- Field name introspection from loaded data
+- Type information from Polars schema
+- Basic field metadata display
+- Schema validation against transform operations
+
+**Aspirational:**
+- Autocomplete for field names (basic awareness exists)
 - Type information for formula assistance
-- Field metadata display
+- Advanced field metadata display
 - Schema validation
 
 ## Key Benefits
 
 ### For Terminal Users
 
-- **Keyboard-driven interface**: Full mouse-free operation
-- **Lightweight and fast**: Rust-based performance
-- **Scriptable and composable**: Easy automation
-- **Terminal-native UX**: Seamless integration with CLI workflows
+- **Keyboard-driven interface** — Full mouse-free operation
+- **Lightweight and fast** — Rust-based performance
+- **Scriptable and composable** — Easy automation
+- **Terminal-native UX** — Seamless integration with CLI workflows
 
 ### For Power Query Users
 
-- **Step-based model**: Clear, reversible transformations
-- **Immutable operations**: No side effects
-- **Versionable pipelines**: Save and replay transformations
-- **Schema awareness**: Smart completion and validation
+- **Step-based model** — Clear, reversible transformations (implemented)
+- **Immutable operations** — No side effects (implemented)
+- **Versionable pipelines** — Plan for sidecar format (aspirational)
+- **Schema awareness** — Smart completion and validation (basic implemented)
 
 ### For Developers
 
-- **Rust-based**: High performance and safety
-- **Embeddable**: Can be integrated into other applications
-- **Open architecture**: Easy to extend with custom transformations
-- **Type-safe**: Compile-time error checking
+- **Rust-based** — High performance and safety
+- **Embeddable** — Can be integrated into other applications
+- **Open architecture** — Easy to extend with custom transformations
+- **Type-safe** — Compile-time error checking
 
 ## Usage Examples
 
-### Basic Integration
+### Basic Pipeline (Working)
 
 ```rust
-use nustage::{
-    ironcalc::{IronCalcIntegration, Transformation},
-    transformations::{TransformationFactory, TransformationPipeline},
-};
+use nustage::transformations::{TransformationFactory, TransformationPipeline};
 use polars::prelude::*;
 
-// Load data into IronCalc
+// Load data (CSV recommended for demo)
 let df = DataFrame::from_csv("data.csv")?;
-let ironcalc = IronCalcIntegration::from_dataframe(df)?;
 
-// Apply transformations
-let mut pipeline = TransformationPipeline::new("Analysis".to_string());
-pipeline.add_step(TransformationFactory::select_columns(
-    "SelectColumns".to_string(),
-    vec!["A".to_string(), "B".to_string()],
-))?;
+// Create pipeline
+let mut pipeline = TransformationPipeline::new("Sales Analysis");
 
-// Save to Excel
-ironcalc.save("output.xlsx")?;
+// Add filter
+pipeline.add_step(TransformationFactory::filter_rows("Amount", "> 1000")?)?;
+
+// Add column
+pipeline.add_step(TransformationFactory::add_column("Profit", "@Amount - @Cost")?)?;
+
+// Group by and aggregate
+pipeline.add_step(TransformationFactory::group_by("Region")?)?;
+
+// Select columns
+pipeline.add_step(TransformationFactory::select_columns(vec!["Region", "Profit"])?);
+
+// Run pipeline
+let result_df = pipeline.apply(&df)?;
+
+// Preview result
+println!("{:?}", result_df);
 ```
 
-### Schema-Autocomplete
+### Running from CLI
 
-```rust
-// Get available fields for formula completion
-let fields = get_field_names(&sheet);
-// Returns: ["Name", "Age", "Salary", "Department"]
+```bash
+# Build
+cargo build --release
 
-// Get resolved values
-let value = get_resolved_value(&sheet, row, col)?;
+# Run with CSV (recommended for demo)
+./target/release/nustage test_data/sales.csv
+
+# Run with Parquet
+./target/release/nustage test_data/*.parquet
+
+# Run TUI mode (grid preview via Tabiew)
+./target/release/nustage --tui test_data/sales.csv
 ```
 
-### Transformation Pipeline
+### Examples Directory
 
-```rust
-// Create a transformation pipeline
-let mut pipeline = TransformationPipeline::new("Data Processing");
+```bash
+# Simple demo example
+cargo run --release --example simple_demo
 
-// Add transformations
-pipeline.add_step(TransformationFactory::filter_rows(
-    "Filter".to_string(),
-    "Amount".to_string(),
-    "> 1000".to_string(),
-))?;
-
-pipeline.add_step(TransformationFactory::group_by(
-    "Group".to_string(),
-    vec!["Department".to_string()],
-    vec![Aggregation {
-        column: "Salary".to_string(),
-        operation: AggregationOperation::Sum,
-    }],
-))?;
-
-// Apply transformations
-let transformed_df = pipeline.apply(&original_df)?;
+# IronCalc integration example
+cargo run --release --example ironcalc_integration
 ```
 
 ## Data Flow
 
 ### Loading Data
 
-1. User provides file path (CSV, Excel, Parquet)
+1. User provides file path (CSV, Excel, or Parquet)
 2. Nustage loads data into Polars DataFrame
-3. IronCalcIntegration converts DataFrame to Workbook
-4. Workbook is displayed in terminal UI
+3. Schema is inferred and displayed
+4. Pipeline steps are defined
 
 ### Transformations
 
 1. User defines transformation steps
 2. Nustage validates steps against schema
 3. Steps are applied to DataFrame
-4. Resulting DataFrame is displayed in IronCalc
-5. Workbook can be saved to file
+4. Resulting DataFrame is displayed in TUI (row count, shape)
 
 ### Saving Data
 
-1. IronCalc handles file format conversion
-2. Workbook is serialized to .xlsx or .xls
+1. Export transformed data to desired format (CSV, Parquet, Excel, TSV)
+2. IronCalc handles Excel format conversion (aspirational write support)
 3. User can open in Excel for further analysis
 
 ## API Reference
 
-### IronCalcIntegration
+### Transformation Pipeline
 
-Main integration struct that bridges IronCalc and nustage.
+#### `TransformationPipeline`
 
-#### Methods
+Main pipeline struct for managing transformation steps.
 
-- `from_dataframe(df: DataFrame) -> Result<Self, IronCalcError>`
-  - Creates integration from a Polars DataFrame
-  
-- `from_file(file_path: &str) -> Result<Self, IronCalcError>`
-  - Loads integration from an Excel file
-  
-- `get_schema() -> &[ColumnSchema]`
-  - Returns the schema of the current data
-  
-- `get_dataframe() -> &DataFrame`
-  - Returns the underlying DataFrame
-  
-- `save(file_path: &str) -> Result<(), IronCalcError>`
-  - Saves workbook to file
-  
-- `get_sheet_cells(...) -> Result<Vec<SpreadsheetCell>, IronCalcError>`
-  - Retrieves cells from a sheet
-  
-- `get_sheet_columns(...) -> Result<Vec<SpreadsheetColumn>, IronCalcError>`
-  - Retrieves columns from a sheet
+**Methods:**
+- `new(name: &str) -> Self` — Create a new pipeline with given name
+- `add_step(step: TransformationStep) -> Result<Self, Error>` — Add transformation step
+- `apply(source: &DataFrame) -> Result<DataFrame, Error>` — Execute pipeline on source data
+- `get_schema() -> &Schema` — Get current pipeline schema
 
-### Transformation Types
+#### `TransformationFactory`
 
-```rust
-pub enum Transformation {
-    SelectColumns(Vec<String>),
-    FilterRows(String, String),
-    GroupBy(Vec<String>, Vec<Aggregation>),
-    SortBy(Vec<String>, bool),
-    RenameColumn(String, String),
-    DropColumns(Vec<String>),
-    CustomSql(String),
-    AddColumn(String, String),
-    RemoveDuplicates(bool),
-}
-```
+Static factory for creating transformation steps.
 
-### Aggregation Operations
+**Methods:**
+- `filter_rows(column: &str, condition: &str) -> Result<TransformationStep, Error>`
+- `select_columns(columns: Vec<String>) -> Result<TransformationStep, Error>`
+- `add_column(name: &str, expression: &str) -> Result<TransformationStep, Error>`
+- `group_by(columns: Vec<String>) -> Result<TransformationStep, Error>`
+- `sort_by(column: &str, descending: bool) -> Result<TransformationStep, Error>`
 
-```rust
-pub enum AggregationOperation {
-    Sum,
-    Mean,
-    Count,
-    Min,
-    Max,
-    First,
-    Last,
-    StdDev,
-    Variance,
-}
-```
+### IronCalc Compatibility Layer (Aspirational)
 
-## Integration Scenarios
+#### `IronCalcIntegration`
 
-### 1. Data Loading
+Main compatibility struct for Excel I/O.
 
-Load data from files into IronCalc sheets:
+**Implemented Methods:**
+- Load Excel file and convert to Polars DataFrame
 
-```rust
-let ironcalc = IronCalcIntegration::from_file("data.xlsx")?;
-```
+**Aspirational Methods:**
+- `from_dataframe(df: DataFrame) -> Result<Self, Error>` — Create from DataFrame
+- `get_sheet_cells(...) -> Result<Vec<Cell>, Error>` — Retrieve cells from sheet
+- `get_sheet_columns(...) -> Result<Vec<Column>, Error>` — Retrieve column metadata
+- `save(file_path: &str) -> Result<(), Error>` — Save workbook to file
 
-### 2. Transformation Pipeline
+## Known Limitations
 
-Apply Power Query-style transformations:
+### Read-Only Excel Support
 
-```rust
-let mut pipeline = TransformationPipeline::new("MyPipeline");
-pipeline.add_step(TransformationFactory::select_columns(...))?;
-```
+- **Current state:** IronCalc supports reading Excel files, not writing with full fidelity
+- **Workaround:** Export transformed data as CSV or Parquet
+- **Future:** Full read/write support when IronCalc capabilities mature
 
-### 3. Formula Assistance
+### Sidecar Format
 
-Use IronCalc's formula engine with schema awareness:
+- **Current state:** Pipeline definitions stored in code or CLI arguments
+- **Aspirational:** `.nustage.json` sidecar files for version control
 
-```rust
-let fields = get_field_names(&sheet);
-// Provides autocomplete for formulas
-```
+### SQL Transparency
 
-### 4. Export
+- **Current state:** Generated SQL not displayed in TUI
+- **Aspirational:** SQL transparency display for learning and debugging
 
-Save transformed data back to various formats:
+### Real Cell Rendering
 
-```rust
-ironcalc.save("output.xlsx")?;
-```
+- **Current state:** Grid viewing handled by Tabiew (external tool)
+- **Aspirational:** In-process cell rendering in TUI
 
-### 5. Scripting
+### Charts and Visualization
 
-Use nustage's step model for automation:
-
-```rust
-let pipeline = TransformationPipeline::deserialize(json)?;
-let result = pipeline.apply(&df)?;
-```
-
-## Implementation Considerations
-
-### Immediate Steps
-
-1. ✅ Add IronCalc as a dependency in nustage
-2. ✅ Create integration functions to load data from IronCalc models
-3. ✅ Implement transformation pipeline integration
-4. ✅ Add schema awareness for IronCalc cells
-
-### Future Enhancements
-
-1. **Expression Language Integration**
-   - Integrate Nushell expression language
-   - Support complex formula parsing
-   - Rich formula editor
-
-2. **Advanced Transforms**
-   - Joins between datasets
-   - Pivots and unpivots
-   - Custom SQL queries
-   - Conditional logic
-
-3. **Richer Autocomplete**
-   - IronCalc context-aware suggestions
-   - Formula template library
-   - Variable suggestions
-
-4. **Performance Optimizations**
-   - Lazy evaluation for large datasets
-   - Incremental updates
-   - Memory-efficient operations
-
-5. **Export Capabilities**
-   - Multiple file formats
-   - Custom formatting
-   - Charts and visualizations
+- **Current state:** Not implemented
+- **Future:** Export charts to external tools or files
 
 ## Error Handling
 
 All integration functions return `Result` types with descriptive errors:
 
 ```rust
-pub enum IronCalcError {
-    IronCalcError(String),
-    DataConversionError(String),
-    SheetError(#[from] SheetError),
-    InvalidCellReference(String),
-    FormulaError(String),
+pub enum NustageError {
+    DataError(String),
+    SchemaError(String),
+    TransformError(String),
+    FileError(String),
 }
+```
+
+Example:
+```rust
+let df = DataFrame::from_csv("data.csv").map_err(|e| NustageError::DataError(e.to_string()))?;
 ```
 
 ## Best Practices
 
-1. **Always validate input**: Check file paths and data schemas
-2. **Use transformation pipelines**: For complex data processing
-3. **Leverage schema awareness**: For autocomplete and validation
-4. **Handle errors gracefully**: Use `?` operator for clean error propagation
-5. **Save intermediate results**: For debugging and recovery
+1. **Use CSV/Parquet for demo** — Excel support is aspirational for writing
+2. **Use transformation pipelines** — For complex data processing
+3. **Leverage schema awareness** — For autocomplete and validation
+4. **Handle errors gracefully** — Use `?` operator for clean error propagation
+5. **Export to desired format** — CSV, Parquet, or Excel as needed
+6. **Plan for sidecar** — When version control is needed
 
 ## Contributing
 
@@ -346,20 +316,28 @@ When contributing to the IronCalc integration:
 4. Consider backward compatibility
 5. Provide usage examples
 
-## License
+## See Also
 
-This integration is part of the nustage project and follows its licensing terms.
+- [`README.md`](../README.md) — Project overview and current implementation status
+- [`QUICKSTART.md`](../QUICKSTART.md) — Build and run instructions
+- [`ROADMAP.md`](../ROADMAP.md) — Prioritized feature list
+- [`COMPREHENSIVE_ROADMAP.md`](../COMPREHENSIVE_ROADMAP.md) — Detailed feature specifications
+
+## Version History
+
+- **0.1.2** — First honest release with clear separation of implemented vs aspirational features
+- **0.1.1** — Initial public release (now superseded)
 
 ## Support
 
 For issues, questions, or contributions:
 - Check the examples directory for usage patterns
-- Review the API documentation
+- Review the API documentation in `src/transformations/`
 - Open an issue on the project repository
 - Submit a pull request with tests
 
 ---
 
-**Last Updated**: 2024
-**Version**: 0.1.0
-**Status**: In Development
+**Version:** 0.1.2  
+**Status:** Honest Documentation Release  
+**Note:** Features marked as "Aspirational" are documented but not yet implemented.

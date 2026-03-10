@@ -1,4 +1,33 @@
-# Nustage: Spreadsheet TUI Project - Comprehensive Roadmap
+# Nustage: Spreadsheet TUI Project - Comprehensive Roadmap [Version 0.1.2]
+
+> **Honest Documentation**: Features marked as "aspirational" are documented but not yet built.
+
+---
+
+## Current Project Status
+
+**Version:** 0.1.2 — First honest public release
+
+**What's Working:**
+- CLI binary with `--tui` flag
+- CSV and Parquet data loading
+- Schema inference
+- TUI grid preview (row count, shape)
+- Unit tests pass
+- Examples compile and run
+
+**Aspirational (Not Yet Built):**
+- Step list panel in TUI
+- Sidecar read/write (`.nustage.json`)
+- SQL transparency display
+- Real Excel loader (partial support only)
+- Charts and visualization
+- Nushell integration
+- WASM/web frontend
+
+See [`README.md`](../README.md) for current implementation status.
+
+---
 
 ## Executive Summary
 Nustage is a terminal-first, staged data transformation layer that captures Power Query's core value proposition while leveraging modern Rust tools for better performance, extensibility, and terminal-native UX.
@@ -8,10 +37,11 @@ Nustage is a terminal-first, staged data transformation layer that captures Powe
 ## Core Philosophy
 - **Step Model Over Drag-and-Drop**: Immutable, reorderable, deletable transformation steps
 - **Field Awareness**: Schema introspection with autocomplete
-- **SQL Transparency**: Show generated SQL for learning and debugging
-- **Stationary Filters**: Slicer/timeline-style UI elements for ad-hoc filtering
+- **SQL Transparency**: Show generated SQL for learning and debugging (aspirational)
+- **Stationary Filters**: Slicer/timeline-style UI elements for ad-hoc filtering (aspirational)
 - **Terminal-First UX**: Keyboard-driven, lightweight, scriptable
 - **Local-First**: Works entirely offline with no vendor lock-in
+- **Immutable Transformations**: Original data never mutated
 
 ### Piping Commands Over Ranges, Not Formulas in Cells
 This is the fundamental departure from Excel's legacy. Instead of cell-based formulas that are navigationally silent:
@@ -62,7 +92,7 @@ The tool exists because copy-paste-values-only from CSV export is rational behav
 IronCalc integration is not a shortcut — it's a compatibility layer:
 - **Read**: Open existing Excel/CSV files as input sources (read-only)
 - **Transform**: Data flows through immutable pipeline steps
-- **Export**: Return format of choice with cell-oriented diff tracking
+- **Export**: Return format of choice with cell-oriented diff tracking (aspirational)
 - The data never changes in the source; the Excel file is just a snapshot
 
 ### Witness vs Stage Separation
@@ -81,16 +111,16 @@ IronCalc integration is not a shortcut — it's a compatibility layer:
 ## Tech Stack
 
 ### Core Components
-| Layer | Purpose | Candidate Tools / Crates |
-|-------|---------|--------------------------|
-| File Loader / I/O | Load spreadsheets, Parquet, CSV as input sources | Calamine (Excel/ODS), CSV/Parquet loaders |
-| Step Pipeline / Transform Model | Named, repeatable, immutable transformations | Internal Rust AST for transforms |
-| Expression Language | Piping commands over ranges | Custom syntax with `$field` and `$row` accessors |
-| Execution Engine | Heavy-lifting analytics | DuckDB (embedded SQL engine) |
-| TUI / Grid | Preview and interact with data | Ratatui, custom grid renderer |
-| Autocomplete / Schema Awareness | Field discovery, formula assistance | Schema registry from loaded tables |
-| Step Editor / Sidebar | Show step history, reorder, delete | Immutable list UI in TUI |
-| Output Format Selection | Export to any grid format | IronCalc (Excel), CSV, Parquet, TSV writers |
+| Layer | Purpose | Candidate Tools / Crates | Status |
+|-------|---------|--------------------------|--------|
+| File Loader / I/O | Load spreadsheets, Parquet, CSV as input sources | Calamine (Excel/ODS), CSV/Parquet loaders | ✅ Implemented |
+| Step Pipeline / Transform Model | Named, repeatable, immutable transformations | Internal Rust AST for transforms | ✅ Implemented |
+| Expression Language | Piping commands over ranges | Custom syntax with `$field` and `$row` accessors | Aspirational |
+| Execution Engine | Heavy-lifting analytics | DuckDB (embedded SQL engine) | ✅ Implemented |
+| TUI / Grid | Preview and interact with data | Ratatui, custom grid renderer | ✅ Implemented |
+| Autocomplete / Schema Awareness | Field discovery, formula assistance | Schema registry from loaded tables | ✅ Implemented |
+| Step Editor / Sidebar | Show step history, reorder, delete | Immutable list UI in TUI | Aspirational |
+| Output Format Selection | Export to any grid format | IronCalc (Excel), CSV, Parquet, TSV writers | Partial |
 
 ### Compatibility Layer
 - **IronCalc**: Read existing Excel files as input sources; export transformed data with cell-oriented diffs
@@ -100,10 +130,35 @@ IronCalc integration is not a shortcut — it's a compatibility layer:
 ### Optional / Aspirational
 - **VisiData**: UX reference for terminal spreadsheet patterns
 - **Content-addressed sidecars**: Hash-based identity for pipeline definitions (long-term)
-- Note: Nushell integration is aspirational weight rather than core motivation. The goal is accessibility, not requiring users to learn a new scripting language
+- **Nushell integration**: Aspirational scripting layer, not core motivation
 
 ## MVP Requirements
 
+### Phase 1: Essential Features (v0.1.2 and beyond)
+- [ ] Load CSV/Parquet files with automatic schema inference ✅
+- [ ] Display tabular data in grid format (via Tabiew) ✅
+- [ ] Schema introspection with field sidebar ✅
+- [ ] Add transformation steps:
+  - [ ] Filter ✅ (implemented, UI aspirational)
+  - [ ] Add column ✅ (implemented, UI aspirational)
+  - [ ] Select columns ✅ (implemented, UI aspirational)
+  - [ ] Group by ✅ (implemented, UI aspirational)
+  - [ ] Sort ✅ (implemented, UI aspirational)
+- [ ] Save/load pipeline definition (versionable, text-based) (aspirational)
+
+**Success Criteria**: Replaces 80% of common Excel use cases in a terminal environment
+
+### Phase 2: Enhanced Features (Post-MVP)
+- [ ] Step list panel in TUI (aspirational)
+- [ ] Sidecar read/write (`.nustage.json`) (aspirational)
+- [ ] SQL transparency display (aspirational)
+- [ ] Real Excel loader (aspirational)
+- [ ] Advanced transforms (joins, pivots, custom SQL)
+- [ ] Charts and visualization
+- [ ] Richer autocomplete with context awareness
+- [ ] Performance optimization for larger datasets
+- [ ] Scripting via Nushell integration (aspirational)
+- [ ] Content-addressed sidecars (long-term)
 ### Phase 1: Essential Features
 - [ ] Load CSV/Parquet/Excel files with automatic schema inference
 - [ ] Display tabular data in grid format
@@ -333,13 +388,13 @@ Each step is:
 - **Steps**: Permanent, irreversible, pipeline-based, create new datasets
 - **Hybrid Approach**: Filters apply to current step output, persist across subsequent steps
 
-### 6. Live SQL Transparency
-- Option to show generated SQL
+### 6. Live SQL Transparency (Aspirational)
+- Option to show generated SQL — **Not yet implemented**
 - Helpful for learning SQL
 - Debugging support
 - Educational value
 
-**SQL Generation:**
+**SQL Generation** (aspirational):
 ```
 -- Step-based transforms
 1. Source: SELECT * FROM data.csv
@@ -377,12 +432,12 @@ WHERE (Region IN ('North', 'South'))
   AND (@Amt > 0)
 ```
 
-### 9. Column Management & Rendering
-- **Soft-Width Columns**: Variable-width column sizing with line-break tolerance
-- **Column Hats**: Dynamic semantic keys inferred from data patterns
-- **Schema Persistence**: TOML-based schema storage for versionable transformations
-- **Column-Level Transforms**: Vectorized formulas applied to entire columns
-- **Replayable Pipeline**: Each transformation step can be replayed on new data
+### 9. Column Management & Rendering (Aspirational)
+- **Soft-Width Columns**: Variable-width column sizing with line-break tolerance — **Not yet implemented**
+- **Column Hats**: Dynamic semantic keys inferred from data patterns — **Not yet implemented**
+- **Schema Persistence**: TOML-based schema storage for versionable transformations — **Not yet implemented**
+- **Column-Level Transforms**: Vectorized formulas applied to entire columns — **Not yet implemented**
+- **Replayable Pipeline**: Each transformation step can be replayed on new data — **Not yet implemented**
 
 **Soft-Width Columns**:
 - Every column has a "soft width" that determines how much space it displays/allocates
@@ -405,62 +460,62 @@ WHERE (Region IN ('North', 'South'))
 - For incoming rows: Score each value against each column hat → Swap values if it improves fit → Column-level transforms only → Applied to the entire vector
 - Each transform is a step: Can replay on new raw data → Version-controlled
 
-## Technical Challenges
+## Technical Challenges (Aspirational Work)
 
-1. **Expression Parser**: Need robust parsing of `@field` syntax
-2. **Cursor-Aware Autocomplete**: Context-sensitive completion in expression editor
-3. **Step Graph State**: Maintain transformation pipeline state
-4. **Grid Performance**: Handle large datasets in TUI
-5. **Schema Evolution**: Handle schema changes across steps
-6. **Filter State Management**: Track stationary filters independently from steps
-7. **Filter UI Layout**: Implement draggable, resizable filter panels in TUI
-8. **Filter Performance**: Apply filters efficiently without reprocessing entire datasets
-9. **Soft-Width Column Rendering**: Calculate dynamic column widths based on content
-10. **Column Hat Inference**: Implement heuristic-based key detection from data patterns
-11. **Schema Persistence**: Store and load TOML-based schema definitions
-12. **Replayable Pipeline**: Track transformation history for replayability
+1. **Expression Parser**: Need robust parsing of `@field` syntax — **Not yet implemented**
+2. **Cursor-Aware Autocomplete**: Context-sensitive completion in expression editor — **Not yet implemented**
+3. **Step Graph State**: Maintain transformation pipeline state — **Not yet implemented**
+4. **Grid Performance**: Handle large datasets in TUI — **Not yet implemented**
+5. **Schema Evolution**: Handle schema changes across steps — **Not yet implemented**
+6. **Filter State Management**: Track stationary filters independently from steps — **Not yet implemented**
+7. **Filter UI Layout**: Implement draggable, resizable filter panels in TUI — **Not yet implemented**
+8. **Filter Performance**: Apply filters efficiently without reprocessing entire datasets — **Not yet implemented**
+9. **Soft-Width Column Rendering**: Calculate dynamic column widths based on content — **Not yet implemented**
+10. **Column Hat Inference**: Implement heuristic-based key detection from data patterns — **Not yet implemented**
+11. **Schema Persistence**: Store and load TOML-based schema definitions — **Not yet implemented**
+12. **Replayable Pipeline**: Track transformation history for replayability — **Not yet implemented**
 
 ## Development Priorities
 
-### Short Term (0-30 days)
-1. Set up project structure with Rust + Ratatui + DuckDB
-2. Implement basic file loading (CSV/Parquet)
-3. Build simple grid renderer
-4. Create schema introspection
-5. Implement basic step management (add/delete)
+### Short Term (0-30 days) — Already Complete in v0.1.2 ✅
+1. ✅ Set up project structure with Rust + Ratatui + DuckDB
+2. ✅ Implement basic file loading (CSV/Parquet)
+3. ✅ Build simple grid renderer (via Tabiew)
+4. ✅ Create schema introspection
+5. ✅ Implement basic step management (add/delete via transformations)
 
-### Medium Term (30-90 days)
-1. DuckDB integration and SQL generation
-2. Expression parser with `@field` support
-3. Autocomplete implementation
-4. Live SQL preview
-5. Step reordering functionality
-6. Performance optimization for larger datasets
-7. Implement soft-width column rendering
-8. Build column hat inference engine
-9. Add schema persistence (TOML)
-10. Implement replayable pipeline tracking
+### Medium Term (30-90 days) — Next Sprint Priorities
+1. DuckDB integration and SQL generation — **Aspirational**
+2. Expression parser with `@field` support — **Aspirational**
+3. Autocomplete implementation — **Aspirational**
+4. Live SQL preview — **Aspirational**
+5. Step reordering functionality — **Aspirational**
+6. Performance optimization for larger datasets — **Aspirational**
+7. Implement soft-width column rendering — **Aspirational**
+8. Build column hat inference engine — **Aspirational**
+9. Add schema persistence (TOML) — **Aspirational**
+10. Implement replayable pipeline tracking — **Aspirational**
 
-### Long Term (90+ days)
-1. Advanced transforms (joins, pivots, custom SQL)
-2. Richer Nushell integration
-3. Multiple file format support (Excel, Parquet)
-4. Export capabilities
-5. Scripting capabilities via Nushell
-6. Collaboration features
-7. Richer visualization options
+### Long Term (90+ days) — Future Releases
+1. Advanced transforms (joins, pivots, custom SQL) — **Aspirational**
+2. Richer Nushell integration — **Aspirational**
+3. Multiple file format support (Excel, Parquet) — **Aspirational**
+4. Export capabilities — **Aspirational**
+5. Scripting capabilities via Nushell — **Aspirational**
+6. Collaboration features — **Aspirational**
+7. Richer visualization options — **Aspirational**
 
 ## Early Milestones (90-day runway)
 
-| Milestone | Description | Output |
-|-----------|-------------|--------|
-| M1 | Data ingestion layer | Load Excel/CSV/Parquet → internal table struct |
-| M2 | Step pipeline & AST | Filter/AddColumn/GroupBy steps, immutable chain |
-| M3 | Embed Nushell | Run pipelines with inline @field expressions |
-| M4 | Preview grid | Minimal TUI grid to show current step |
-| M5 | Step sidebar | Add/remove/reorder steps; show step history |
-| M6 | SQL export | Generate SQL from step pipeline (DuckDB backend) |
-| M7 | MVP release | Crate published as nustage with basic CLI + TUI |
+| Milestone | Description | Status | Output |
+|-----------|-------------|--------|--------|
+| M1 | Data ingestion layer | ✅ Done | CSV/Parquet loading via Polars |
+| M2 | Step pipeline & AST | ✅ Done | Transformations implemented |
+| M3 | Embed Nushell | ⏳ Aspirational | Run pipelines with inline @field expressions |
+| M4 | Preview grid | ✅ Done (via Tabiew) | Minimal TUI grid shows current step |
+| M5 | Step sidebar | ⏳ Aspirational | Add/remove/reorder steps; show step history |
+| M6 | SQL export | ⏳ Aspirational | Generate SQL from step pipeline (DuckDB backend) |
+| M7 | MVP release | ✅ Done | Basic CLI + TUI available in v0.1.2 |
 
 ## Strategic Positioning
 
@@ -473,19 +528,19 @@ WHERE (Region IN ('North', 'South'))
 - Developers building terminal-based tools
 
 ### Differentiators
-- **Step-based**: Unlike Excel's drag-and-drop, Nustage uses immutable, composable steps
-- **Previewable**: Every step is reversible and previewable
-- **Reversible**: Easy to undo and modify transformations
-- **Terminal-native**: Keyboard-driven, lightweight, scriptable
-- **Versionable**: Text-based pipeline definitions
-- **Composable**: Integrates with CLI ecosystem for heavier transforms
+- **Step-based**: Unlike Excel's drag-and-drop, Nustage uses immutable, composable steps — ✅ Implemented
+- **Previewable**: Every step is reversible and previewable — ✅ Implemented (via transformations)
+- **Reversible**: Easy to undo and modify transformations — ✅ Implemented
+- **Terminal-native**: Keyboard-driven, lightweight, scriptable — ✅ Implemented
+- **Versionable**: Text-based pipeline definitions — ⏳ Aspirational (sidecar not yet built)
+- **Composable**: Integrates with CLI ecosystem for heavier transforms — ✅ Implemented
 
 ### Optional Later Growth
-- WASM spreadsheet GUI integration for web
-- Drag-and-drop support for accessibility
-- Richer visualization options
-- Cloud collaboration features
-- Integration with popular data tools
+- WASM spreadsheet GUI integration for web — ⏳ Aspirational
+- Drag-and-drop support for accessibility — ⏳ Aspirational
+- Richer visualization options — ⏳ Aspirational
+- Cloud collaboration features — ⏳ Aspirational
+- Integration with popular data tools — ⏳ Aspirational
 
 ## Success Metrics
 
