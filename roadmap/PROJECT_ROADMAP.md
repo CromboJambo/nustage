@@ -1,324 +1,241 @@
-# NuStage: The Alternate Spreadsheet Lineage
+# NuStage: Honest Project Roadmap [Version 0.1.2]
 
-## Project Vision
-Build a terminal-native, locally-first computational environment that treats data as streams and formulas as composable operations, combining spreadsheet utility with the philosophy of Smalltalk and the determinism of build systems. NuStage captures the essence of what spreadsheet software could have become if Lotus 1-2-3 had not been crushed by Excel's corporate standardization.
+> **Piping commands over ranges, not formulas in cells.**
+
+---
+
+## Current Project Status
+
+**Version:** 0.1.2 — First honest public release
+
+**Implemented and Working:**
+- ✅ CLI binary with `--tui` flag for terminal UI
+- ✅ CSV and Parquet data loading via Polars
+- ✅ DuckDB execution engine for data processing
+- ✅ TUI with grid preview (row count, shape display)
+- ✅ Unit tests pass
+- ✅ Examples: `simple_demo` and `ironcalc_integration`
+
+**Aspirational (Not Yet Built):**
+- ⏳ Step list panel in TUI
+- ⏳ Sidecar read/write (`.nustage.json` format)
+- ⏳ SQL transparency display
+- ⏳ Real Excel loader (partial support only)
+- ⏳ Charts and visualization
+- ⏳ Nushell integration
+- ⏳ Content-addressed sidecars
+- ⏳ WASM/web frontend
+
+See [`README.md`](../README.md) for current implementation status.
+
+---
 
 ## Core Philosophy
 
-### The Alternate Spreadsheet Concept
-The spreadsheet metaphor was co-opted by corporate interests. The alternate lineage would have been about:
-- **Clarity over compatibility**
-- **Sovereignty over lock-in**  
-- **Composability over feature accumulation**
-- **Transparency over opacity**
+### Step Model Over Cell-Based Formulas
 
-### Core Design Principles
-1. **Data as Streams**: Data is immutable, flowing through composable operations
-2. **Composable Operations**: Each operation is pure, reversible, and testable
-3. **Cells Above the Grid**: Views and transformations happen above the data, not within cells
-4. **Terminal-First**: Keyboard-driven, lightweight, scriptable, and efficient
-5. **Sovereign Computation**: Local-first, version-controlled, and transparent
+Instead of cell-based formulas like `=SUM(F7:F23)` that break when someone moves a column, we use pipeline syntax:
 
-### Piping Commands Over Ranges, Not Formulas in Cells
-This is the fundamental departure from Excel's legacy. Instead of cell-based formulas that are navigationally silent and break everything when moved:
-- Pipe commands over ranges: `data | filter "region='West'" | group "product"`
-- Range syntax with field awareness: `$field.revenue - $field.cost` or `$row.revenue - $row.cost`
-- Each pipeline step is visible, named, repeatable, and auditable
-- The tool exists because copy-paste-values-only from CSV export is rational behavior given current alternatives
-
-### The "Cells Above the Grid" Architecture
-```
-┌─────────────────────────────────────┐
-│  Layer 1: Composable Operations      │  ← "Cells above the grid"
-│  ─────────────────────────────────   │
-│  data.csv | filter "region='West'"   │
-│    | select "name, revenue"          │
-│    | sort "revenue"                  │
-│    | group "product" | sum "revenue" │
-└─────────────────────────────────────┘
-              ↓
-┌─────────────────────────────────────┐
-│  Layer 2: Views & Transformations    │  ← Pivot, slicer, timeline
-│  ─────────────────────────────────   │
-│  [Pivot Table]  [Filters]  [Slicers]│
-└─────────────────────────────────────┘
-              ↓
-┌─────────────────────────────────────┐
-│  Layer 3: Immutable Data Source     │  ← CSV/Parquet/Excel
-│  ─────────────────────────────────   │
-│  [Raw Data Grid]                     │
-└─────────────────────────────────────┘
+```bash
+data.csv | filter "region='West'" | group "product" | sum "revenue"
 ```
 
-### The Witness Layer Distinction
-Nustage and Tabiew serve different purposes:
-- **Tabiew**: Grid viewing, inspection, cell-oriented navigation (the witness)
-- **Nustage**: Pipeline orchestration, transformation steps, reproducible workflows (the stage)
-This boundary should remain explicit to avoid accidentally rebuilding what already exists.
+Each step is:
+- **Named** — readable by a human
+- **Immutable** — never mutates the source
+- **Ordered** — forms a reproducible chain
+- **Reversible** — delete or reorder without starting over
 
-### Domain Advantage: Hierarchical Cost Data
-The real edge is manufacturing cost data structures that Excel struggles with:
-- Bill of Materials: box in box in box hierarchies
+### Domain Advantage: Manufacturing Cost Data
+
+The real edge is manufacturing cost structures that Excel struggles with:
+- Bill of Materials: hierarchical, box-in-box hierarchies
 - Standard vs actual variance tracking
 - Multi-level rollups with clear provenance
-This is why copy-paste-values-only from CSV export is rational behavior today — the step-based model makes this accessible to accounting colleagues.
 
-## Architecture
+The tool exists because copy-paste-values-only from CSV export is rational behavior today — the step-based model makes this accessible to accounting colleagues.
 
-```
-NuStage Core (Rust)
-  ↓
-Data Model (Immutable DataFrames)
-  ↓
-DAG System (Composable Operations)
-  ↓
-Transform Engine (Pure Functions)
-  ↓
-Tabular Results
-  ↓
-TUI/GUI Visualization
-```
+---
 
-## Tech Stack
+## What's Implemented (0.1.2)
 
-### Core Components
-- **Data Processing**: Polars (columnar, fast, Python-compatible)
-- **TUI Framework**: Ratatui (Rust terminal UI library)
-- **Data Reading**: Calamine (Excel/CSV/Parquet support)
-- **CLI**: Clap (Rust CLI parsing)
-- **State Management**: Custom reactive system for DAG state
+### 1. CLI Binary
 
-### Optional Integrations
-- VisiData (UX reference for terminal data tools)
-- IronCalc/Excel (as output format, not computational layer)
-- Calamine (reading Excel/CSV files as input sources)
-
-Note: Nushell integration is aspirational weight rather than core motivation. The goal is to make step-based pipelines accessible without requiring users to learn a new scripting language.
-
-## Implementation Roadmap
-
-### Phase 1: Foundation (Weeks 1-2)
-- [ ] Project structure and module organization
-- [ ] Data loading (CSV/Parquet/Excel)
-- [ ] Basic DataFrame operations
-- [ ] Schema introspection
-- [ ] Immutable data model
-
-### Phase 2: Core Engine (Weeks 3-4)
-- [ ] DAG system implementation
-- [ ] Transform operations (filter, select, sort)
-- [ ] Composable operation builder
-- [ ] Pipeline state management
-- [ ] Version tracking for nodes
-
-### Phase 3: CLI Layer (Weeks 5-6)
-- [ ] Clap-based CLI interface
-- [ ] Pipeline construction commands
-- [ ] Inspect and visualize commands
-- [ ] Interactive pipeline editing
-
-### Phase 4: TUI Layer (Weeks 7-8)
-- [ ] Ratatui grid renderer
-- [ ] DAG visualization
-- [ ] Node exploration interface
-- [ ] Live data preview at each node
-- [ ] Basic pipeline editing
-
-### Phase 5: Advanced Features (Weeks 9-12)
-- [ ] Group and aggregate operations
-- [ ] Custom transform creation
-- [ ] Export capabilities (Excel, CSV, Parquet, TSV)
-- [ ] Performance optimization
-- [ ] Cell-oriented diff mode for version comparison
-
-### Phase 6: Extensions (Weeks 13-16)
-- [ ] Custom expression language with `$field` and `$row` syntax
-- [ ] Content-addressed sidecar files (hash-based identity)
-- [ ] Advanced visualization
-
-## Core Data Structures
-
-### Dataset Model
-```rust
-pub struct Dataset {
-    pub id: String,
-    pub name: String,
-    pub path: PathBuf,
-    pub created_at: DateTime,
-    pub columns: Vec<String>,
-}
-```
-
-### Transform Node
-```rust
-pub struct TransformNode {
-    pub id: String,
-    pub name: String,
-    pub operation: Operation,
-    pub dependencies: Vec<String>,
-    pub outputs: Vec<String>,
-    pub version: u64,
-}
-```
-
-### Pipeline
-```rust
-pub struct Pipeline {
-    pub id: String,
-    pub name: String,
-    pub nodes: HashMap<String, TransformNode>,
-    pub edges: Vec<(String, String)>,
-}
-```
-
-### Operation Types
-```rust
-pub enum Operation {
-    Filter(String),
-    Select(Vec<String>),
-    Group(String),
-    Aggregate(String, String),
-    Sort(String),
-    Join(String),
-    Custom(String),
-}
-```
-
-## Key Features
-
-### 1. Composable Operations
-Instead of cell formulas like `=SUM(A1:A10)`, use pipeline syntax:
 ```bash
-data.csv | 
-  filter "region='West'" | 
-  select "name, revenue" | 
-  sort "revenue"
+cargo build --release
+./target/release/nustage test_data/sales.csv
 ```
 
-### 2. DAG-Based Pipeline Management
-- Each operation is a node in a directed acyclic graph
-- Dependencies are explicit and navigable
-- Version tracking enables reproducibility
-- Branching and merging supported
+Features:
+- Accepts CSV and Parquet file paths
+- Supports `--tui` flag for interactive mode
+- Proper error handling and argument parsing
 
-### 3. Terminal-First UX
-- Keyboard-driven workflows
-- Lightweight and efficient
-- Scriptable via CLI
-- Integrated with shell environment
+### 2. Data Loading
 
-### 4. Immutable Data Model
-- Original data never mutated
-- Each operation produces new immutable version
-- Clear dependency graph
-- Easy to understand and debug
+Via Polars:
+- CSV files — full support
+- Parquet files — full support
+- Schema inference on load
 
-### 5. Field Awareness
-- Schema introspection with autocomplete
-- Context-sensitive operations
-- Type inference and validation
-- Error messages that guide correct usage
+### 3. TUI Grid Preview
 
-### 6. Export Format Flexibility
-- Excel as one output option among many (CSV, Parquet, TSV)
-- Cell-oriented diffs for change tracking across pipeline versions
-- Sidecar files with content-addressed identities (hash-based versioning)
+```bash
+./target/release/nustage --tui test_data/sales.csv
+```
 
-## Technical Challenges
+Features:
+- Grid display via Tabiew (external tool)
+- Row count and shape display
+- Keyboard-driven interface
 
-1. **Expression Parser**: Need robust parsing for custom expression language
-2. **DAG State Management**: Maintain transformation pipeline state efficiently
-3. **Performance**: Handle large datasets in TUI without lag
-4. **Visualization**: Effective DAG and data visualization
-5. **Extensibility**: Easy to add new operations and integrations
+### 4. Examples
 
-## Development Priorities
+```bash
+cargo run --release --example simple_demo
+cargo run --release --example ironcalc_integration
+```
 
-### Short Term (Weeks 1-4)
-1. Data loading and schema introspection
-2. Basic transform operations (filter, select, sort)
-3. Simple DAG builder
-4. Basic TUI grid rendering
+Both examples compile and run successfully.
 
-### Medium Term (Weeks 5-8)
-1. Advanced transforms (group, aggregate, join)
-2. Interactive pipeline editing
-3. Live data preview
-4. Performance optimization
+### 5. Testing
 
-### Long Term (Weeks 9+)
-1. Custom expression language
-2. Nushell scripting integration
-3. WASM frontend support
-4. Collaboration features
-5. Advanced visualization
+```bash
+cargo test --release
+```
+
+Unit tests pass on core data loading and transformation pipeline.
+
+### 6. Module Structure
+
+```
+src/
+├── main.rs           — CLI entry point
+├── lib.rs            — Library exports
+├── cli/              — Argument parsing
+├── data/             — File loading and schema inference
+├── transformations/   — Core transform operations
+├── sidecar/          — Pipeline serialization (aspirational)
+├── mcode/            — Power Query M generation (library capability)
+├── ironcalc/         — Excel compatibility layer (partial)
+├── tui/              — Terminal UI rendering
+└── tui_grid.rs       — Grid rendering helpers
+```
+
+---
+
+## What's Aspirational (Not Yet Built)
+
+### High Priority (0.1.3–0.1.4)
+
+1. **Step List Panel** — Left sidebar showing named transformation steps with reorder/delete actions
+2. **Sidecar Read/Write** — `.nustage.json` files for versioning pipeline definitions
+3. **SQL Transparency** — Display generated DuckDB queries in the TUI
+4. **Real Excel Loader** — IronCalc currently supports partial Excel reading
+
+### Medium Priority (0.1.5–0.2.0)
+
+5. **Charts and Visualization** — Not MVP scope
+6. **Rich Autocomplete** — Basic field awareness exists; richer context-aware suggestions needed
+7. **Performance Optimization** — Core functionality tested on sample data; large datasets untested
+8. **Real Cell Rendering** — Grid viewing handled by Tabiew (external tool)
+
+### Long-Term Vision (Future Releases)
+
+9. **Nushell Integration** — Scripting layer (aspirational)
+10. **Collaboration Features** — Not part of core problem domain
+11. **Content-Addressed Sidecars** — Hash-based pipeline identity (long-term)
+12. **WASM/Web Frontend** — Deferred until core API stabilizes
+13. **Joins, Pivots, Unpivots** — Advanced transforms not yet built
+14. **Custom Expression Language** — DuckDB SQL is sufficient for MVP
+
+---
+
+## Implementation Priorities
+
+### Immediate (0.1.2 Release)
+
+- ✅ Review and approve cleaned documentation
+- ✅ Update Cargo.toml version to 0.1.2 (pending)
+- ⏳ Review roadmap files for honest status markers
+
+### Short Term (Next Sprint)
+
+1. Build step list panel in TUI
+2. Implement sidecar read/write
+3. Add SQL transparency display
+4. Fix Excel loader (current workaround requires CSV conversion)
+
+### Medium Term (Next 1–2 Months)
+
+5. Performance optimization for larger datasets
+6. Richer autocomplete with context awareness
+7. Test with real manufacturing cost data (BOM hierarchies)
+8. Export capabilities (CSV, Parquet, Excel, TSV)
+
+### Long Term (Future Releases)
+
+9. Custom expression language with `$field` and `$row` syntax
+10. Content-addressed sidecar files (hash-based identity)
+11. Nushell scripting integration (if desired)
+12. WASM frontend (if core API stabilizes)
+
+---
 
 ## Success Metrics
 
-### Success Metrics
+### Usability
 
-- **Usability**: Can accounting colleagues actually use the step-based model without reverting to copy-paste-values-only from CSV export
-- **Performance**: Handle datasets that would choke Excel
-- **Composability**: Operations are pure, reversible, and testable
-- **Sovereignty**: Local-first, version-controlled, and transparent
-- **Extensibility**: Easy to add new operations and integrations
+> Can accounting colleagues actually use the step-based model without reverting to copy-paste-values-only from CSV export?
 
-The north star: making the step-based model accessible enough that your accounting colleagues would actually use it instead of relying on CSV exports.
+**Current State:** Basic pipeline concept demonstrated via CLI and TUI preview.
 
-## The "Cells Above the Grid" Concept
+### Performance
 
-This is the key innovation that separates NuStage from traditional spreadsheets:
+> Handle datasets that would choke Excel.
 
-**Cells in current spreadsheets:**
-- Navigationally silent
-- Break everything
-- Are modular but opaque
-- Hide the full picture
+**Current State:** Core functionality tested on sample data in `test_data/`.
 
-**Cells above the grid in NuStage:**
-- Make data immutable
-- Enable multiple perspectives
-- Make operations explicit
-- Make the system testable
-- Enable composable transformations
+### Composability
 
-## Example Pipeline
+> Operations are pure, reversible, and testable.
 
-```bash
-# Load data
-nustage load transactions.csv
+**Current State:** Implemented in Polars/DuckDB; step model exists but UI for managing steps is aspirational.
 
-# Build pipeline
-nustage pipeline new "sales_analysis"
-nustage pipeline add filter "region='West'"
-nustage pipeline add group "product"
-nustage pipeline add aggregate "sum" "revenue"
+### Sovereignty
 
-# Run pipeline
-nustage pipeline run
+> Local-first, version-controlled, and transparent.
 
-# Visualize
-nustage visualize
+**Current State:** Works entirely offline; Git tracks changes; sidecar versioning is aspirational.
 
-# Inspect
-nustage inspect
-```
+### Extensibility
 
-## The "Dangerous" Part
+> Easy to add new operations and integrations.
 
-NuStage makes spreadsheets **comprehensible** instead of **opaque**. It makes data **transparent** instead of **black-boxed**. It makes computation **reproducible** instead of **ad-hoc**.
+**Current State:** Module structure supports additions; DuckDB SQL provides extensible backend.
 
-This is not just a spreadsheet tool - it's a computational worldview that never got corporatized. It's the spreadsheet metaphor applied to the modern world of data, computation, and sovereignty.
+---
 
-## Next Steps
+## The North Star
 
-### Next Steps
+The tool exists because copy-paste-values-only from CSV export is rational behavior given current alternatives. The goal is to make the step-based model accessible enough that your accounting colleagues would actually use it — not about replacing Excel with a clone, but about making reproducible pipelines transparent and auditable.
 
-1. **Compression before rebuild**: Throw away the Model<'static> lifetime hack, dummy cell rendering, placeholder Excel loader, .bak files — those are symptoms of building forward through uncertainty
-2. Set up project structure with Rust + Polars + Ratatui
-3. Implement data loading and schema introspection
-4. Build DAG system and transform operations
-5. Create CLI interface
-6. Develop TUI visualization
-7. Test with manufacturing cost data structures (BOM hierarchies, variance tracking)
-8. Make the step-based model accessible to accounting colleagues — that's the real test
+---
+
+## See Also
+
+- [`README.md`](../README.md) — Overview of capabilities and honest status
+- [`QUICKSTART.md`](../QUICKSTART.md) — Build and run instructions
+- [`IMPLEMENTATION_SUMMARY.md`](../IMPLEMENTATION_SUMMARY.md) — Refactor summary and current state
+- [`CHANGELOG.md`](../CHANGELOG.md) — Version history
+- [`COMPREHENSIVE_ROADMAP.md`](COMPREHENSIVE_ROADMAP.md) — Detailed feature specifications (also being cleaned up)
+
+---
+
+**Version:** 0.1.2  
+**Date:** 2026  
+**Status:** First honest public release
+
+---
+
+**Note:** This roadmap reflects the actual state of the codebase. Features marked as "aspirational" are documented but not yet built. See version 0.1.2 documentation for clear separation between what's working and what's planned.

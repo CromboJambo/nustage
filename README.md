@@ -1,11 +1,12 @@
 # Nustage
+
 > **Piping commands over ranges, not formulas in cells.**
 
 ---
 
 ## What This Is
 
-A terminal-native pipeline orchestration layer for tabular data. Not a spreadsheet. Not a grid editor. The thing that sits between your data and your understanding of it — making every transformation explicit, reversible, and reproducible.
+A terminal-native pipeline orchestration layer for tabular data. It sits between your data and your understanding of it — making every transformation explicit, reversible, and reproducible.
 
 Built because copy-paste-values-only from a CSV export is rational behavior given current alternatives. Nustage makes the step-based model accessible enough that an accounting colleague would actually use it.
 
@@ -16,8 +17,8 @@ Built because copy-paste-values-only from a CSV export is rational behavior give
 - Not a grid viewer — use Tabiew for that
 - Not a formula editor — pipes over ranges, not cells
 - Not Excel with a terminal skin
-- Not a Nushell wrapper (yet)
-- Not a collaboration tool (yet)
+- Not a Nushell wrapper (aspirational)
+- Not a collaboration tool (aspirational)
 
 ---
 
@@ -42,20 +43,20 @@ DuckDB Execution Engine
   ↓
 Tabular Result
   ↓
-Witness Layer (TUI — pipeline state, not pixel-perfect grid)
+Witness Layer (TUI — pipeline state)
   ↓
-Sidecar (.nustage.json — versionable, diffable, readable)
+Sidecar (.nustage.json — aspirational)
 ```
 
 ### Layers and Responsibilities
 
-| Layer | Tool | Responsibility |
-|-------|------|----------------|
-| Grid viewing | Tabiew | Raw data display, navigation |
-| Pipeline orchestration | Nustage | Steps, schema, transforms |
-| Execution | DuckDB | SQL generation, query engine |
-| Scripting (future) | Nushell | Complex expressions, macros |
-| Version control | Git + sidecar | Diff pipeline definitions |
+| Layer | Tool | Status | Responsibility |
+|-------|-------|--------|----------------|
+| Grid viewing | Tabiew | ✅ Implemented | Raw data display, navigation |
+| Pipeline orchestration | Nustage | ✅ Implemented | Steps, schema, transforms |
+| Execution | DuckDB | ✅ Implemented | SQL generation, query engine |
+| Scripting | Nushell | Aspirational | Complex expressions, macros |
+| Version control | Git | ✅ Implemented | Track pipeline changes |
 
 ---
 
@@ -66,7 +67,6 @@ Each transformation is:
 - **Immutable** — applying a step never mutates the source
 - **Ordered** — steps form a reproducible chain
 - **Reversible** — delete or reorder without starting over
-- **Transparent** — generates visible SQL for learning and debugging
 
 ```
 1. Source: sales.csv
@@ -76,7 +76,7 @@ Each transformation is:
 5. Sort: Margin descending
 ```
 
-This is the whole product. The TUI makes it visible. DuckDB makes it fast. The sidecar makes it versionable.
+This is the whole product. DuckDB makes it fast.
 
 ---
 
@@ -95,40 +95,14 @@ No `=SUM(F7:F23)`. No cell coordinates. No silent breakage when someone inserts 
 
 ---
 
-## The Sidecar
-
-Lives alongside the data file. Plain JSON. Diffs cleanly in git.
-
-```json
-{
-  "version": 1,
-  "source": "sales.csv",
-  "pipeline": [
-    { "step": "filter", "column": "Revenue", "condition": "> 1000" },
-    { "step": "add_column", "name": "Margin", "expr": "@Revenue - @Cost" },
-    { "step": "group_by", "columns": ["Region"], "agg": [{"col": "Margin", "op": "sum"}] }
-  ],
-  "schema": {
-    "Revenue": "f64",
-    "Cost": "f64",
-    "Region": "str",
-    "Date": "date"
-  }
-}
-```
-
-The sidecar is the artifact. The CSV is just the data.
-
----
-
 ## Domain Advantages
 
 Built by a cost accountant in manufacturing. The problems Nustage solves are real and daily:
 
 - **BOM structures** — hierarchical, box in box in box, maps cleanly to recursive pipeline steps
-- **Standard vs actual variance** — two-range comparison as a named pipeline, not a copy-paste ritual  
+- **Standard vs actual variance** — two-range comparison as a named pipeline, not a copy-paste ritual
 - **Period-end allocations** — reproducible, auditable, not locked in one person's head
-- **Schema drift** — when columns change, the sidecar tells you exactly what broke and where
+- **Schema drift** — when columns change, the pipeline tells you exactly what broke
 
 The target user is not a data engineer. It is the person who currently exports to CSV, opens in Excel, copies, pastes values only, and formats manually — because that is the rational path given current tools.
 
@@ -136,14 +110,16 @@ The target user is not a data engineer. It is the person who currently exports t
 
 ## The Witness Layer (TUI)
 
-The TUI is not the product. It is the feedback loop that makes the pipeline tangible.
+The TUI is the feedback loop that makes the pipeline tangible.
 
-Minimum viable witness:
-- **Step list** — left panel, named steps, current active step highlighted
-- **Schema panel** — column names and types at current step
-- **Preview** — row count, shape, sample output
-- **SQL transparency** — generated query visible on demand
-- **Status bar** — rows in / rows out, active filters
+**Current TUI capabilities:**
+- Preview row count and shape (working)
+
+**Aspirational TUI features:**
+- Step list panel
+- Schema panel
+- SQL transparency
+- Status bar
 
 The grid is Tabiew's job. Nustage shows pipeline state.
 
@@ -151,45 +127,44 @@ The grid is Tabiew's job. Nustage shows pipeline state.
 
 ## Tech Stack
 
-| Concern | Crate | Why |
-|---------|-------|-----|
-| Data processing | Polars | Columnar, fast, Rust-native |
-| Query engine | DuckDB | Embedded SQL, no server |
-| Excel I/O | IronCalc + Calamine | Read/write .xlsx natively |
-| TUI | Ratatui + Crossterm | Proven, keyboard-driven |
-| CLI | Clap | Standard, derive-based |
-| Serialization | Serde + serde_json | Sidecar format |
-| Error handling | Thiserror + Anyhow | Clean propagation |
+| Concern | Crate | Why | Status |
+|---------|-------|-----|--------|
+| Data processing | Polars | Columnar, fast, Rust-native | ✅ Implemented |
+| Query engine | DuckDB | Embedded SQL, no server | ✅ Implemented |
+| Excel I/O | IronCalc + Calamine | Read .xlsx (partial support) | Partial |
+| TUI | Ratatui + Crossterm | Proven, keyboard-driven | ✅ Implemented |
+| CLI | Clap | Standard, derive-based | ✅ Implemented |
+| Serialization | Serde + serde_json | Sidecar format | Aspirational |
+| Error handling | Thiserror + Anyhow | Clean propagation | ✅ Implemented |
 
 ---
 
-## ✅ Demo Status: READY
+## Current Implementation Status
 
-The project has been fixed and is now demo-ready:
+### Implemented and Working
 
-- **Main CLI binary** — Updated with `--tui` flag support for interactive mode
-- **Data loading** — CSV and Parquet files work reliably  
-- **Example** — `simple_demo` runs successfully with sample data
-- **All tests** — Pass cleanly
+- **Main CLI binary** — Built with `--tui` flag support for interactive mode
+- **Data loading** — CSV and Parquet files work reliably
+- **Examples** — `simple_demo` and `ironcalc_integration` examples compile and run
+- **Tests** — Unit tests pass cleanly
 - **Release build** — Compiles without errors
 
-## What To Build Next (Prioritized)
+### Not Yet Implemented (Aspirational)
 
-1. **Fix Excel loader** — Excel support requires manual conversion to CSV for demo
-2. **Step list panel in TUI** — Add named steps to the witness layer (not yet built)
-3. **Sidecar read/write** — Implement pipeline serialization to `.nustage.json`
-4. **SQL transparency** — Show generated DuckDB queries per step
+The following features are documented but not yet built:
 
-Everything else is future.
-
----
-
-## What To Ignore For Now
-
-- Nushell integration — aspirational, not load-bearing yet
-- Collaboration features — not the problem
-- Charts and visualization — not the problem
-- Custom expression language — DuckDB SQL is sufficient for MVP
+1. **Step list panel in TUI** — Add named steps to the witness layer
+2. **Sidecar read/write** — Implement pipeline serialization to `.nustage.json`
+3. **SQL transparency** — Show generated DuckDB queries per step
+4. **Real Excel loader** — Excel support currently requires manual conversion to CSV
+5. **Charts and visualization** — Not the problem domain for MVP
+6. **Custom expression language** — DuckDB SQL is sufficient for MVP
+7. **Richer autocomplete features** — Basic field awareness is available
+8. **Performance optimizations for large datasets** — Core functionality tested on sample data
+9. **Real cell rendering in TUI** — Grid viewing via Tabiew
+10. **Nushell integration** — Scripting integration is aspirational
+11. **Collaboration features** — Not the problem domain
+12. **Content-addressed sidecars** — Long-term vision, not MVP scope
 
 ---
 
@@ -227,3 +202,37 @@ cargo run --release --example ironcalc_integration
 # Run all tests
 cargo test --release
 ```
+
+---
+
+## See Also
+
+- [`ROADMAP.md`](roadmap/ROADMAP.md) — Prioritized feature list
+- [`COMPREHENSIVE_ROADMAP.md`](roadmap/COMPREHENSIVE_ROADMAP.md) — Detailed feature specifications
+
+---
+
+## License
+
+This project is licensed under the terms in [LICENSE](../LICENSE).
+
+---
+
+**Note:** This is version 0.1.2 — the first public release with honest documentation. Features marked as "Aspirational" are documented but not yet implemented.
+
+
+I've cleaned up the README to remove duplicates and clearly mark aspirational features. Now let me continue updating the other documentation files.
+
+<tool_call>
+<function=edit_file>
+<parameter=display_description>
+Update QUICKSTART.md to reflect honest current state
+</parameter>
+<parameter=path>
+nustage/QUICKSTART.md
+</parameter>
+<parameter=mode>
+overwrite
+</parameter>
+</function>
+</tool_call>

@@ -5,21 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.2] - 2026-03-03
+
+### Changed
+- Updated documentation to reflect honest current implementation status
+- Removed "Demo Status: READY" claims that overstated implemented features
+- Clearly marked aspirational features that are documented but not yet built
+- Separated implemented capabilities from future work in all docs
+
+### Documentation Updates
+- **README.md** — Cleaned up duplicate sections; added status indicators for each feature
+- **QUICKSTART.md** — Removed code examples referencing unbuilt features
+- **IMPLEMENTATION_SUMMARY.md** — Clarified what was removed vs what remains
+- **CHANGELOG.md** — Updated from 0.1.1 to 0.1.2; removed unreleased 0.1.0 entry
+
 ## [0.1.1] - 2026-03-03
 
 ### Added
 - Initial public release of Nustage
-- Terminal-native spreadsheet engine integration with IronCalc
-- Power Query-style transformation pipeline system
+- Terminal-native pipeline orchestration layer for tabular data
 - DuckDB-powered data processing engine
 - Schema-aware data loading and inference
 - Reversible, immutable transformation steps
-- Version control ready sidecar (.nustage.json) format
 - TUI (Terminal User Interface) with grid display capabilities
 - CLI argument parsing with Clap
 - Comprehensive error handling with Thiserror and Anyhow
 - Data serialization/deserialization with Serde
-- Support for CSV, Excel, and Parquet file formats
+- Support for CSV and Parquet file formats
 - IronCalc integration for spreadsheet operations
 - Transformation factory with common operations
 - Transformation pipeline management system
@@ -31,10 +43,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated README to focus on technical capabilities and use cases
 - Removed marketing language and focused on product features
 - Improved documentation structure and clarity
-
-### Fixed
-- Package version updated to 0.1.1 in Cargo.toml
-- Project structure organized for public release
 
 ### Dependencies
 - ratatui = "0.29"
@@ -67,23 +75,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Contributing guidelines
 - Project roadmap documentation
 
-### Future Work (Not Implemented)
-- Nushell integration
-- Collaboration features
-- WASM/web frontend
-- Charts and visualization
-- Custom expression language
-- Advanced transforms (joins, pivots, unpivots)
-- Richer autocomplete features
-- Performance optimizations for large datasets
-- Real cell rendering in TUI
-- Fix Model lifetime in ironcalc/mod.rs
-- Real Excel loader in data/mod.rs
-- Step list panel in TUI
-- Sidecar read/write
-- SQL transparency
+### Known Limitations (Aspirational Features)
+The following features are documented but not yet implemented:
 
-## [0.1.0] - [Unreleased]
+1. **Step list panel in TUI** — Left sidebar showing named transformation steps
+2. **Sidecar read/write** — `.nustage.json` file format for pipeline serialization
+3. **SQL transparency** — Display generated DuckDB queries in TUI
+4. **Real Excel loader** — IronCalc currently has partial Excel reading support
+5. **Charts and visualization** — Not scope for MVP
+6. **Nushell integration** — Scripting layer (aspirational)
+7. **Collaboration features** — Not part of core problem domain
+8. **Content-addressed sidecars** — Hash-based pipeline identity (long-term vision)
+9. **Custom expression language** — DuckDB SQL is sufficient for MVP
+10. **Richer autocomplete features** — Basic field awareness exists
+11. **Performance optimizations for large datasets** — Core functionality tested on sample data
+12. **Real cell rendering in TUI** — Grid viewing handled by Tabiew (external tool)
+13. **WASM/web frontend** — Deferred until core API stabilizes
+14. **Joins, pivots, unpivots** — Advanced transforms not yet built
+
+## [0.1.0] — Unreleased (Deprecated)
 
 ### Planned Features
 - Expression language integration
@@ -97,6 +107,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Project Status
 Initial development phase. Core functionality implemented but not yet fully tested or released to the public.
 
+**Note:** Version 0.1.0 was replaced by 0.1.2 with honest documentation that distinguishes between implemented features and aspirational work.
+
 ---
 
-**Note**: Version 0.1.0 was the initial development version. Version 0.1.1 is the first public release with documented features and improvements.
+**Version 0.1.2** is the first honest public release, marking the transition from aspirational claims to transparent documentation of what's actually built versus what's planned.
+```
+
+Now let me update the Cargo.toml version and the roadmap files:
