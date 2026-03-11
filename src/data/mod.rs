@@ -53,7 +53,9 @@ fn load_csv(file_path: &str) -> Result<DataFrame, PipelineError> {
 
 /// Load Excel file (.xlsx or .xls) - placeholder implementation
 fn load_excel_placeholder() -> Result<DataFrame, PipelineError> {
-    Ok(DataFrame::empty_with_height(0))
+    Err(PipelineError::UnsupportedFormat(
+        "Excel loading not implemented".to_string(),
+    ))
 }
 
 /// Load Parquet file using polars

@@ -115,8 +115,13 @@ impl TransformationPipeline {
 
     /// Add a transformation step
     pub fn add_step(&mut self, step: TransformationStep) -> Result<(), TransformationError> {
+        let mut step = step;
+
         // Validate the step
         self.validate_step(&step)?;
+
+        // Compute output schema for this step
+        step.output_schema = self.compute_output_schema(&step.step_type)?;
 
         // Update the schema
         self.update_schema(&step);
@@ -183,6 +188,7 @@ impl TransformationPipeline {
 
     /// Validate a transformation step
     fn validate_step(&self, step: &TransformationStep) -> Result<(), TransformationError> {
+        let schema_known = !self.input_schema.is_empty();
         match &step.step_type {
             StepType::SelectColumns(columns) => {
                 if columns.is_empty() {
@@ -191,12 +197,14 @@ impl TransformationPipeline {
                     ));
                 }
                 // Check if columns exist
-                let available_columns: HashSet<_> =
-                    self.input_schema.iter().map(|s| s.name.as_str()).collect();
+                if schema_known {
+                    let available_columns: HashSet<_> =
+                        self.input_schema.iter().map(|s| s.name.as_str()).collect();
 
-                for column in columns {
-                    if !available_columns.contains(column.as_str()) {
-                        return Err(TransformationError::ColumnNotFound(column.clone()));
+                    for column in columns {
+                        if !available_columns.contains(column.as_str()) {
+                            return Err(TransformationError::ColumnNotFound(column.clone()));
+                        }
                     }
                 }
             }
@@ -207,7 +215,7 @@ impl TransformationPipeline {
                     ));
                 }
                 // Check if column exists
-                if !self.input_schema.iter().any(|s| s.name == *column) {
+                if schema_known && !self.input_schema.iter().any(|s| s.name == *column) {
                     return Err(TransformationError::ColumnNotFound(column.clone()));
                 }
             }
@@ -218,12 +226,14 @@ impl TransformationPipeline {
                     ));
                 }
                 // Check if columns exist
-                let available_columns: HashSet<_> =
-                    self.input_schema.iter().map(|s| s.name.as_str()).collect();
+                if schema_known {
+                    let available_columns: HashSet<_> =
+                        self.input_schema.iter().map(|s| s.name.as_str()).collect();
 
-                for column in group_columns {
-                    if !available_columns.contains(column.as_str()) {
-                        return Err(TransformationError::ColumnNotFound(column.clone()));
+                    for column in group_columns {
+                        if !available_columns.contains(column.as_str()) {
+                            return Err(TransformationError::ColumnNotFound(column.clone()));
+                        }
                     }
                 }
             }
@@ -234,12 +244,14 @@ impl TransformationPipeline {
                     ));
                 }
                 // Check if columns exist
-                let available_columns: HashSet<_> =
-                    self.input_schema.iter().map(|s| s.name.as_str()).collect();
+                if schema_known {
+                    let available_columns: HashSet<_> =
+                        self.input_schema.iter().map(|s| s.name.as_str()).collect();
 
-                for column in columns {
-                    if !available_columns.contains(column.as_str()) {
-                        return Err(TransformationError::ColumnNotFound(column.clone()));
+                    for column in columns {
+                        if !available_columns.contains(column.as_str()) {
+                            return Err(TransformationError::ColumnNotFound(column.clone()));
+                        }
                     }
                 }
             }
@@ -302,35 +314,46 @@ impl TransformationPipeline {
             }
             StepType::GroupBy(group_columns, aggregations) => {
                 // Apply group by with aggregations using polars lazy API
-                let mut lf = df.clone().lazy();
+                let group_exprs = group_columns
+                    .iter()
+                    .map(|group_col| col(group_col))
+                    .collect::<Vec<_>>();
 
-                for group_col in group_columns {
-                    lf = lf.group_by([group_col.as_str()]).agg(
-                        &aggregations
-                            .iter()
-                            .map(|agg| match agg.operation {
-                                AggregationOperation::Sum => col(&agg.column).sum(),
-                                AggregationOperation::Mean => col(&agg.column).mean(),
-                                AggregationOperation::Count => col(&agg.column).count(),
-                                AggregationOperation::Min => col(&agg.column).min(),
-                                AggregationOperation::Max => col(&agg.column).max(),
-                                AggregationOperation::First => col(&agg.column).first(),
-                                AggregationOperation::Last => col(&agg.column).last(),
-                                AggregationOperation::StdDev => col(&agg.column).std(0),
-                                AggregationOperation::Variance => col(&agg.column).var(0),
-                            })
-                            .collect::<Vec<_>>(),
-                    );
-                }
-
-                lf.collect()
-                    .map_err(|e| TransformationError::DataError(e.to_string()))
-            }
-            StepType::SortBy(columns, _descending) => {
-                let sort_columns: Vec<String> = columns.iter().cloned().collect();
+                let agg_exprs = aggregations
+                    .iter()
+                    .map(|agg| match agg.operation {
+                        AggregationOperation::Sum => col(&agg.column).sum(),
+                        AggregationOperation::Mean => col(&agg.column).mean(),
+                        AggregationOperation::Count => col(&agg.column).count(),
+                        AggregationOperation::Min => col(&agg.column).min(),
+                        AggregationOperation::Max => col(&agg.column).max(),
+                        AggregationOperation::First => col(&agg.column).first(),
+                        AggregationOperation::Last => col(&agg.column).last(),
+                        AggregationOperation::StdDev => col(&agg.column).std(0),
+                        AggregationOperation::Variance => col(&agg.column).var(0),
+                    })
+                    .collect::<Vec<_>>();
 
                 df.clone()
-                    .sort(&sort_columns, SortMultipleOptions::default())
+                    .lazy()
+                    .group_by(group_exprs)
+                    .agg(agg_exprs)
+                    .collect()
+                    .map_err(|e| TransformationError::DataError(e.to_string()))
+            }
+            StepType::SortBy(columns, descending) => {
+                let sort_columns: Vec<String> = columns.iter().cloned().collect();
+
+                let descending_flags = vec![*descending; sort_columns.len()];
+
+                df.clone()
+                    .sort(
+                        &sort_columns,
+                        SortMultipleOptions {
+                            descending: descending_flags,
+                            ..Default::default()
+                        },
+                    )
                     .map_err(|e| TransformationError::DataError(e.to_string()))
             }
             StepType::RenameColumn(old_name, new_name) => {
@@ -403,6 +426,100 @@ impl TransformationPipeline {
     /// Update schema based on step
     fn update_schema(&mut self, step: &TransformationStep) {
         self.input_schema = step.output_schema.clone();
+    }
+
+    /// Compute output schema based on step type
+    fn compute_output_schema(
+        &self,
+        step_type: &StepType,
+    ) -> Result<Vec<ColumnSchema>, TransformationError> {
+        let input_schema = &self.input_schema;
+
+        match step_type {
+            StepType::SelectColumns(columns) => {
+                if input_schema.is_empty() {
+                    return Ok(Vec::new());
+                }
+                let mut output = Vec::new();
+                for col_name in columns {
+                    if let Some(col) = input_schema.iter().find(|c| c.name == *col_name) {
+                        output.push(col.clone());
+                    }
+                }
+                Ok(output)
+            }
+            StepType::DropColumns(columns) => {
+                if input_schema.is_empty() {
+                    return Ok(Vec::new());
+                }
+                Ok(input_schema
+                    .iter()
+                    .filter(|c| !columns.contains(&c.name))
+                    .cloned()
+                    .collect())
+            }
+            StepType::RenameColumn(old_name, new_name) => {
+                if input_schema.is_empty() {
+                    return Ok(Vec::new());
+                }
+                Ok(input_schema
+                    .iter()
+                    .map(|c| {
+                        if c.name == *old_name {
+                            ColumnSchema {
+                                name: new_name.clone(),
+                                ..c.clone()
+                            }
+                        } else {
+                            c.clone()
+                        }
+                    })
+                    .collect())
+            }
+            StepType::AddColumn(name, _) => {
+                let mut output = input_schema.clone();
+                output.push(ColumnSchema {
+                    index: output.len(),
+                    name: name.clone(),
+                    data_type: "Unknown".to_string(),
+                });
+                Ok(output)
+            }
+            StepType::GroupBy(group_columns, aggregations) => {
+                let mut output = Vec::new();
+
+                for group_col in group_columns {
+                    if let Some(col) = input_schema.iter().find(|c| c.name == *group_col) {
+                        output.push(col.clone());
+                    }
+                }
+
+                for agg in aggregations {
+                    let op_name = match agg.operation {
+                        AggregationOperation::Sum => "sum",
+                        AggregationOperation::Mean => "mean",
+                        AggregationOperation::Count => "count",
+                        AggregationOperation::Min => "min",
+                        AggregationOperation::Max => "max",
+                        AggregationOperation::First => "first",
+                        AggregationOperation::Last => "last",
+                        AggregationOperation::StdDev => "stddev",
+                        AggregationOperation::Variance => "variance",
+                    };
+                    output.push(ColumnSchema {
+                        index: output.len(),
+                        name: format!("{op_name}_{}", agg.column),
+                        data_type: "Unknown".to_string(),
+                    });
+                }
+
+                Ok(output)
+            }
+            StepType::FilterRows(_, _)
+            | StepType::SortBy(_, _)
+            | StepType::CustomSql(_)
+            | StepType::RemoveDuplicates(_) => Ok(input_schema.clone()),
+        }
     }
 }
 
