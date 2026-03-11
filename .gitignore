@@ -1,18 +1,47 @@
-Cargo.lock
+# bin/
+bin/*
+bin/.*
 
-# Editor directories and files
+# Test data and temporary files
+test_data/
+*.tmp
+*.temp
+
+# Cache and generated outputs
+*.csv.cache
+*.json.cache
+*.log
+*.out
+
+# Editor directories
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
-.DS_Store
-*.bak
 
-# Test data files
+# Build artifacts
 target/
-test_data/
-example_output.xlsx
+Cargo.lock
 
-# Documentation
+# Documentation screenshots
 docs/Screenshot_*
+
+# Backup files
+*.bak
+*.backup
+```
+
+<tool_call>
+<function=edit_file>
+<parameter=display_description>
+Create bin folder with production scripts using relative paths that work from any data location
+</parameter>
+<parameter=mode>
+create
+</parameter>
+<parameter=path>
+nustage/bin
+</parameter>
+</function>
+</tool_call>
