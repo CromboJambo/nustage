@@ -219,20 +219,3 @@ This project is licensed under the terms in [LICENSE](../LICENSE).
 ---
 
 **Note:** This is version 0.1.2 — the first public release with honest documentation. Features marked as "Aspirational" are documented but not yet implemented.
-
-
-I've cleaned up the README to remove duplicates and clearly mark aspirational features. Now let me continue updating the other documentation files.
-
-<tool_call>
-<function=edit_file>
-<parameter=display_description>
-Update QUICKSTART.md to reflect honest current state
-</parameter>
-<parameter=path>
-nustage/QUICKSTART.md
-</parameter>
-<parameter=mode>
-overwrite
-</parameter>
-</function>
-</tool_call>
