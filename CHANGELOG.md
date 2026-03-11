@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.1.2] - 2026-03-03
+## [0.1.2] - 2026-03-09
 
 ### Changed
 - Updated documentation to reflect honest current implementation status
@@ -114,4 +114,3 @@ Initial development phase. Core functionality implemented but not yet fully test
 **Version 0.1.2** is the first honest public release, marking the transition from aspirational claims to transparent documentation of what's actually built versus what's planned.
 ```
 
-Now let me update the Cargo.toml version and the roadmap files:
