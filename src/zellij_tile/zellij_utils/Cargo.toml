@@ -1,0 +1,16 @@
+[package]
+name = "nustage-zellij-utils"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "Utility functions for Nustage Zellij integration"
+
+[dependencies]
+zellij-tile-utils = { version = "0.0.3", features = ["with-serde"] }
+serde = { version = "1.0", features = ["derive"] }
+anyhow = "1.0"
+thiserror = "2.0"
+tokio = { version = "1.0", features = ["full"] }
+
+[dev-dependencies]
+zellij-tile-utils = { version = "0.0.3", features = ["mocks"] }
