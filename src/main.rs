@@ -18,7 +18,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     match nustage::data::load_data(&cli.input.to_string_lossy()) {
         Ok(df) => {
             println!(
-                "✅ Successfully loaded {} rows with {} columns",
+                "Successfully loaded {} rows with {} columns",
                 df.height(),
                 df.width()
             );
