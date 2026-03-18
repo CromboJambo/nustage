@@ -40,7 +40,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         })
         .collect();
 
-    pipeline.add_step(TransformationFactory::select_columns(
+    let select_step = TransformationFactory::select_columns(
         "Select columns".to_string(),
         vec![
             "Date".to_string(),
@@ -49,15 +49,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             "Units".to_string(),
             "Revenue".to_string(),
         ],
-    )?)?;
+    )?;
+    pipeline.add_step(select_step)?;
 
-    pipeline.add_step(TransformationFactory::filter_rows(
+    let filter_step = TransformationFactory::filter_rows(
         "Filter high revenue".to_string(),
         "Revenue".to_string(),
         "> 1000".to_string(),
-    )?)?;
+    )?;
+    pipeline.add_step(filter_step)?;
 
-    pipeline.add_step(TransformationFactory::group_by(
+    let group_step = TransformationFactory::group_by(
         "Group by region".to_string(),
         vec!["Region".to_string()],
         vec![
@@ -70,10 +72,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 operation: AggregationOperation::Sum,
             },
         ],
-    )?)?;
+    )?;
+    pipeline.add_step(group_step)?;
 
     // Summary: apply pipeline to produce aggregated output.
-    let summary_df = pipeline.apply(&df)?;
+    let mut summary_df = pipeline.apply(&df)?;
     println!(
         "Summary DataFrame: {} rows, {} columns",
         summary_df.height(),
@@ -86,7 +89,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let _ = std::fs::remove_file(output_path);
     }
     let mut file = File::create(output_path)?;
-    CsvWriter::new(&mut file).finish(&summary_df)?;
+    CsvWriter::new(&mut file).finish(&mut summary_df)?;
 
     println!("Report written to {}", output_path);
     println!("\n=== Example Complete ===");

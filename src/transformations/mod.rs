@@ -2,11 +2,17 @@ use polars::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt;
+use thiserror::Error;
 
+#[derive(Debug, Error)]
 pub enum TransformationError {
+    #[error("Invalid transformation step: {0}")]
     InvalidStep(String),
+    #[error("Column not found: {0}")]
     ColumnNotFound(String),
+    #[error("Schema mismatch: {0}")]
     SchemaMismatch(String),
+    #[error("Data error: {0}")]
     DataError(String),
 }
 
@@ -74,8 +80,12 @@ impl TransformationPipeline {
         }
     }
 
-    pub fn add_step(&mut self, step: TransformationStep) {
+    pub fn add_step(&mut self, mut step: TransformationStep) -> Result<(), TransformationError> {
+        self.validate_step(&step)?;
+        step.output_schema = self.compute_output_schema(&step.step_type)?;
+        self.update_schema(&step);
         self.steps.push(step);
+        Ok(())
     }
 
     pub fn apply(&self, df: &DataFrame) -> Result<DataFrame, TransformationError> {
