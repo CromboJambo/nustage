@@ -17,7 +17,7 @@ sys
 # 4. Help commands: `help commands` shows all available commands as a table
 help commands
 
-# === ACCESSING TABLE DATA ===
+# === ACCESSING TABLE DATA ===ls
 # Now let's see how to work with these tables.
 
 # Use `| get column_name` to extract a single column from a table
@@ -25,7 +25,7 @@ help commands
 ls | get name
 
 # Use `| select column1 column2` to pick specific columns
-# Example: Show only name and type from `ls`
+# Example: Show only name and type from `ls`ls
 ls | select name type
 
 # Use `| where condition` to filter rows
@@ -37,12 +37,16 @@ ls | where type == dir
 
 # Exercise 1: Show only files (not directories) from `ls`
 # Hint: Use `where type == file`
+ls | where type == file
 
 # Exercise 2: Show the first 5 processes by CPU usage
 # Hint: Use `ps` then `sort-by cpu` then `first 5`
+ps | sort-by cpu | first 5
 
 # Exercise 3: Get all commands that contain "sys" in their name
 # Hint: Use `help commands` then `where name | str contains "sys"`
+help commands | where name has  sys
+
 
 # === KEY INSIGHT ===
 # Everything you see above is a table. The power of Nushell comes from chaining these tables

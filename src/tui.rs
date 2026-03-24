@@ -1,8 +1,9 @@
-//! TUI Main Entry Point for Nustage
+//! TUI module for Nustage
 //!
-//! This module implements the terminal user interface for exploring and manipulating data.
+//! This module implements the terminal user interface for exploring and
+//! manipulating data. Call [`run`] from `main.rs` to launch the interactive
+//! session.
 
-use clap::Parser;
 use nustage::data::{get_schema, load_data};
 use polars::prelude::*;
 use ratatui::{
@@ -13,39 +14,31 @@ use ratatui::{
         terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
     },
     frame::Frame,
-    layout::{Constraint, Layout, Rect},
-    terminal::Terminal,
-    widgets::{Block, Borders, Paragraph, Table, TableState},
+    layout::{Constraint, Layout},
+    style::{Color, Style},
+    widgets::{Block, Borders, Paragraph},
 };
 use std::{
-    io::{self, stdout},
+    io::stdout,
     path::PathBuf,
 };
 
-#[derive(Parser, Debug)]
-#[command(author, version, about, long_about = None)]
-struct Cli {
-    /// Input file path (CSV, Excel, Parquet)
-    #[arg(value_name = "FILE")]
-    input: PathBuf,
-}
-
-/// Main TUI application structure
+/// Main TUI application structure.
 pub struct App {
-    /// Data frame being displayed
+    /// Data frame being displayed.
     data: DataFrame,
-    /// Schema information
+    /// Schema information.
     schema: Vec<nustage::data::ColumnSchema>,
-    /// Current grid configuration
+    /// Current grid configuration.
     grid_config: nustage::tui_grid::GridConfig,
-    /// Current grid state
+    /// Current grid state.
     grid_state: nustage::tui_grid::GridState,
     /// Is the application running?
     running: bool,
 }
 
 impl App {
-    /// Create a new app instance
+    /// Create a new app instance from a file path.
     pub fn new(input_path: &PathBuf) -> Result<Self, Box<dyn std::error::Error>> {
         let data = load_data(&input_path.to_string_lossy())?;
         let schema = get_schema(&data)?;
@@ -62,34 +55,23 @@ impl App {
         })
     }
 
-    /// Handle key events
+    /// Handle a terminal event.
     pub fn handle_event(&mut self, event: Event) -> Result<(), Box<dyn std::error::Error>> {
-        match event {
-            Event::Key(key) => {
-                match key.code {
-                    KeyCode::Char('q') | KeyCode::Esc => self.running = false,
-                    KeyCode::Down => {
-                        // Scroll down in grid
-                        self.grid_state.table_state.select_next();
-                    }
-                    KeyCode::Up => {
-                        // Scroll up in grid
-                        self.grid_state.table_state.select_previous();
-                    }
-                    _ => {}
-                }
+        if let Event::Key(key) = event {
+            match key.code {
+                KeyCode::Char('q') | KeyCode::Esc => self.running = false,
+                KeyCode::Down => self.grid_state.table_state.select_next(),
+                KeyCode::Up => self.grid_state.table_state.select_previous(),
+                _ => {}
             }
-            _ => {}
         }
-
         Ok(())
     }
 
-    /// Render the UI
+    /// Render the UI into the given frame.
     pub fn render(&mut self, frame: &mut Frame) {
-        let size = frame.size();
+        let size = frame.area();
 
-        // Create layout
         let chunks = Layout::default()
             .direction(ratatui::layout::Direction::Vertical)
             .constraints([
@@ -98,7 +80,6 @@ impl App {
             ])
             .split(size);
 
-        // Render grid display
         nustage::tui_grid::render_grid_display(
             frame,
             chunks[0],
@@ -107,7 +88,6 @@ impl App {
             &self.grid_state,
         );
 
-        // Render status bar
         let status_text = format!(
             "Data: {} rows × {} columns | Schema: {} fields",
             self.data.height(),
@@ -115,48 +95,41 @@ impl App {
             self.schema.len()
         );
 
-        let status_block = Block::default().title("Status").borders(Borders::ALL);
-
-        let status_paragraph = Paragraph::new(status_text).block(status_block);
+        let status_paragraph = Paragraph::new(status_text)
+            .block(Block::default().title("Status").borders(Borders::ALL))
+            .style(Style::default().fg(Color::White));
 
         frame.render_widget(status_paragraph, chunks[1]);
     }
 }
 
-/// Run the TUI application
-pub fn run() -> Result<(), Box<dyn std::error::Error>> {
-    let cli = Cli::parse();
-
-    // Initialize terminal
+/// Run the TUI application with the given input file.
+pub fn run(input_path: &PathBuf) -> Result<(), Box<dyn std::error::Error>> {
     enable_raw_mode()?;
     execute!(stdout(), EnterAlternateScreen)?;
 
     let backend = CrosstermBackend::new(stdout());
-    let mut terminal = Terminal::new(backend)?;
+    let mut terminal = ratatui::Terminal::new(backend)?;
 
-    // Create app instance
-    let mut app = App::new(&cli.input)?;
+    let mut app = App::new(input_path)?;
 
-    // Main loop
-    loop {
-        terminal.draw(|frame| app.render(frame))?;
+    let result = (|| -> Result<(), Box<dyn std::error::Error>> {
+        loop {
+            terminal.draw(|frame| app.render(frame))?;
 
-        if let Event::Key(key) = event::read()? {
-            app.handle_event(key)?;
+            let ev = event::read()?;
+            app.handle_event(ev)?;
 
             if !app.running {
                 break;
             }
         }
-    }
+        Ok(())
+    })();
 
-    // Cleanup
+    // Always restore the terminal, even on error.
     disable_raw_mode()?;
     execute!(stdout(), LeaveAlternateScreen)?;
 
-    Ok(())
-}
-
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    run()
+    result
 }

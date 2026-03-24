@@ -9,6 +9,7 @@ pub mod ironcalc;
 pub mod mcode;
 pub mod sidecar;
 pub mod transformations;
+pub mod tui;
 pub mod tui_grid;
 
 // Re-export commonly used types for convenience

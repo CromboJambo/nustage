@@ -193,13 +193,13 @@ impl SidecarFile {
             .collect();
 
         for current in current_schema {
-            if let Some(original_type) = original_types.get(current.name.as_str()) {
-                if *original_type != current.data_type.as_str() {
-                    lines.push(format!(
-                        "  ~ Type changed: {} from {} to {}",
-                        current.name, original_type, current.data_type
-                    ));
-                }
+            if let Some(original_type) = original_types.get(current.name.as_str())
+                && *original_type != current.data_type.as_str()
+            {
+                lines.push(format!(
+                    "  ~ Type changed: {} from {} to {}",
+                    current.name, original_type, current.data_type
+                ));
             }
         }
 

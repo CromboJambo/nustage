@@ -33,7 +33,7 @@ impl Default for GridConfig {
 }
 
 /// Grid display state
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct GridState {
     /// Current table state for scrolling
     pub table_state: TableState,
@@ -43,17 +43,6 @@ pub struct GridState {
     pub selected_column: Option<usize>,
     /// Filter applied to the data
     pub filter: Option<String>,
-}
-
-impl Default for GridState {
-    fn default() -> Self {
-        Self {
-            table_state: TableState::default(),
-            offset: 0,
-            selected_column: None,
-            filter: None,
-        }
-    }
 }
 
 /// Create a basic grid display for initial exploration

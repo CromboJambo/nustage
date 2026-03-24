@@ -1,7 +1,7 @@
 //! CLI module for nustage data processing tool
 
 use clap::{Parser, Subcommand};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 /// Nustage - Data Processing and Analysis Tool
 #[derive(Parser, Debug)]
@@ -74,7 +74,7 @@ pub fn parse_args() -> Cli {
 }
 
 /// Validate input file path
-pub fn validate_input(input: &PathBuf) -> Result<(), String> {
+pub fn validate_input(input: &Path) -> Result<(), String> {
     if !input.exists() {
         return Err(format!("File not found: {}", input.display()));
     }
@@ -87,7 +87,7 @@ pub fn validate_input(input: &PathBuf) -> Result<(), String> {
 }
 
 /// Get file extension
-pub fn get_file_extension(path: &PathBuf) -> Option<String> {
+pub fn get_file_extension(path: &Path) -> Option<String> {
     path.extension()
         .and_then(|ext| ext.to_str())
         .map(|s| s.to_lowercase())

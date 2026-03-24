@@ -8,7 +8,6 @@
 # 1. Use `let` to bind tables to named variables
 # This makes complex dashboards more readable and reusable
 
-let system_info = sys
 let top_processes = ps | sort-by cpu -r | first 10
 let top_memory = ps | sort-by mem -r | first 10
 let directory_listing = ls | select name type size modified

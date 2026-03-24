@@ -68,7 +68,8 @@ pub struct ColumnSchema {
 pub struct TransformationPipeline {
     pub name: String,
     pub steps: Vec<TransformationStep>,
-    pub input_schema: Vec<ColumnSchema>,
+    /// Tracks the schema as it evolves through each applied step.
+    pub current_schema: Vec<ColumnSchema>,
 }
 
 impl TransformationPipeline {
@@ -76,30 +77,29 @@ impl TransformationPipeline {
         Self {
             name,
             steps: Vec::new(),
-            input_schema: Vec::new(),
+            current_schema: Vec::new(),
         }
     }
 
     pub fn add_step(&mut self, mut step: TransformationStep) -> Result<(), TransformationError> {
         self.validate_step(&step)?;
         step.output_schema = self.compute_output_schema(&step.step_type)?;
-        self.update_schema(&step);
+        self.current_schema = step.output_schema.clone();
         self.steps.push(step);
         Ok(())
     }
 
     pub fn apply(&self, df: &DataFrame) -> Result<DataFrame, TransformationError> {
         let mut result = df.clone();
-
         for step in &self.steps {
             result = self.apply_step(&result, step)?;
         }
-
         Ok(result)
     }
 
+    /// Returns the schema as it stands after all applied steps.
     pub fn output_schema(&self) -> Vec<ColumnSchema> {
-        self.input_schema.clone()
+        self.current_schema.clone()
     }
 
     pub fn get_step(&self, id: &str) -> Option<&TransformationStep> {
@@ -108,14 +108,12 @@ impl TransformationPipeline {
 
     pub fn remove_step(&mut self, id: &str) {
         self.steps.retain(|s| s.id != id);
-    }
-
-    fn rebuild_schema(&mut self) {
-        if let Some(last_step) = self.steps.last() {
-            self.input_schema = last_step.output_schema.clone();
-        } else {
-            self.input_schema = Vec::new();
-        }
+        // Recompute current_schema from the last remaining step.
+        self.current_schema = self
+            .steps
+            .last()
+            .map(|s| s.output_schema.clone())
+            .unwrap_or_default();
     }
 
     fn validate_step(&self, step: &TransformationStep) -> Result<(), TransformationError> {
@@ -129,7 +127,6 @@ impl TransformationPipeline {
                 "Output schema must be set for this step type".to_string(),
             ));
         }
-
         Ok(())
     }
 
@@ -139,16 +136,13 @@ impl TransformationPipeline {
         step: &TransformationStep,
     ) -> Result<DataFrame, TransformationError> {
         match &step.step_type {
-            StepType::SelectColumns(columns) => {
-                let selected_columns: Vec<String> = columns.iter().cloned().collect();
+            StepType::SelectColumns(columns) => df
+                .clone()
+                .select(columns.as_slice())
+                .map_err(|e| TransformationError::DataError(e.to_string())),
 
-                df.clone()
-                    .select(&selected_columns)
-                    .map_err(|e| TransformationError::DataError(e.to_string()))
-            }
             StepType::FilterRows(column, condition) => {
                 let filter_column = column.as_str();
-
                 if let Some((op, value)) = Self::parse_condition(condition) {
                     let result = match op {
                         "gt" => df
@@ -178,11 +172,9 @@ impl TransformationPipeline {
                     Ok(df.clone())
                 }
             }
+
             StepType::GroupBy(group_columns, aggregations) => {
-                let group_exprs = group_columns
-                    .iter()
-                    .map(|group_col| col(group_col))
-                    .collect::<Vec<_>>();
+                let group_exprs = group_columns.iter().map(|c| col(c)).collect::<Vec<_>>();
 
                 let agg_exprs = aggregations
                     .iter()
@@ -206,14 +198,12 @@ impl TransformationPipeline {
                     .collect()
                     .map_err(|e| TransformationError::DataError(e.to_string()))
             }
+
             StepType::SortBy(columns, descending) => {
-                let sort_columns: Vec<String> = columns.iter().cloned().collect();
-
-                let descending_flags = vec![*descending; sort_columns.len()];
-
+                let descending_flags = vec![*descending; columns.len()];
                 df.clone()
                     .sort(
-                        &sort_columns,
+                        columns.as_slice(),
                         SortMultipleOptions {
                             descending: descending_flags,
                             ..Default::default()
@@ -221,6 +211,7 @@ impl TransformationPipeline {
                     )
                     .map_err(|e| TransformationError::DataError(e.to_string()))
             }
+
             StepType::RenameColumn(old_name, new_name) => {
                 let mut result = df.clone();
                 result
@@ -228,25 +219,31 @@ impl TransformationPipeline {
                     .map_err(|e| TransformationError::DataError(e.to_string()))?;
                 Ok(result)
             }
-            StepType::DropColumns(columns) => {
-                let columns_to_drop: Vec<String> = columns.iter().cloned().collect();
 
-                if columns_to_drop.len() == 1 {
+            StepType::DropColumns(columns) => {
+                if columns.len() == 1 {
                     df.clone()
-                        .drop(&columns_to_drop[0])
+                        .drop(&columns[0])
                         .map_err(|e| TransformationError::DataError(e.to_string()))
                 } else {
                     let mut result = df.clone();
-                    for col in &columns_to_drop {
+                    for c in columns {
                         result
-                            .drop_in_place(col.as_str())
+                            .drop_in_place(c.as_str())
                             .map_err(|e| TransformationError::DataError(e.to_string()))?;
                     }
                     Ok(result)
                 }
             }
-            StepType::CustomSql(_) => Ok(df.clone()),
-            StepType::AddColumn(_, _) => Ok(df.clone()),
+
+            StepType::CustomSql(sql) => Err(TransformationError::InvalidStep(format!(
+                "CustomSql is not yet implemented in the Polars pipeline. SQL: {sql}"
+            ))),
+
+            StepType::AddColumn(name, expr) => Err(TransformationError::InvalidStep(format!(
+                "AddColumn '{name}' with expression '{expr}' is not yet implemented"
+            ))),
+
             StepType::RemoveDuplicates(keep_first) => {
                 let strategy = if *keep_first {
                     UniqueKeepStrategy::First
@@ -262,44 +259,37 @@ impl TransformationPipeline {
 
     fn parse_condition(condition: &str) -> Option<(&'static str, f64)> {
         let trimmed = condition.trim();
-
-        if let Some(num_str) = trimmed.strip_prefix("> ") {
-            return num_str.parse().ok().map(|v| ("gt", v));
-        }
         if let Some(num_str) = trimmed.strip_prefix(">= ") {
             return num_str.parse().ok().map(|v| ("gte", v));
         }
-        if let Some(num_str) = trimmed.strip_prefix("< ") {
-            return num_str.parse().ok().map(|v| ("lt", v));
+        if let Some(num_str) = trimmed.strip_prefix("> ") {
+            return num_str.parse().ok().map(|v| ("gt", v));
         }
         if let Some(num_str) = trimmed.strip_prefix("<= ") {
             return num_str.parse().ok().map(|v| ("lte", v));
         }
-
+        if let Some(num_str) = trimmed.strip_prefix("< ") {
+            return num_str.parse().ok().map(|v| ("lt", v));
+        }
         None
-    }
-
-    fn update_schema(&mut self, step: &TransformationStep) {
-        self.input_schema = step.output_schema.clone();
     }
 
     fn compute_output_schema(
         &self,
         step_type: &StepType,
     ) -> Result<Vec<ColumnSchema>, TransformationError> {
-        let input_schema = &self.input_schema;
+        let input_schema = &self.current_schema;
 
         match step_type {
             StepType::SelectColumns(columns) => {
                 if input_schema.is_empty() {
                     return Ok(Vec::new());
                 }
-                let mut output = Vec::new();
-                for col_name in columns {
-                    if let Some(col) = input_schema.iter().find(|c| c.name == *col_name) {
-                        output.push(col.clone());
-                    }
-                }
+                let output = columns
+                    .iter()
+                    .filter_map(|col_name| input_schema.iter().find(|c| c.name == *col_name))
+                    .cloned()
+                    .collect();
                 Ok(output)
             }
             StepType::DropColumns(columns) => {
@@ -341,13 +331,11 @@ impl TransformationPipeline {
             }
             StepType::GroupBy(group_columns, aggregations) => {
                 let mut output = Vec::new();
-
                 for group_col in group_columns {
-                    if let Some(col) = input_schema.iter().find(|c| c.name == *group_col) {
-                        output.push(col.clone());
+                    if let Some(c) = input_schema.iter().find(|c| c.name == *group_col) {
+                        output.push(c.clone());
                     }
                 }
-
                 for agg in aggregations {
                     let op_name = match agg.operation {
                         AggregationOperation::Sum => "sum",
@@ -366,7 +354,6 @@ impl TransformationPipeline {
                         data_type: "Unknown".to_string(),
                     });
                 }
-
                 Ok(output)
             }
             StepType::FilterRows(_, _)
@@ -384,12 +371,10 @@ impl TransformationFactory {
         name: String,
         columns: Vec<String>,
     ) -> Result<TransformationStep, TransformationError> {
-        let step_type = StepType::SelectColumns(columns);
-
         Ok(TransformationStep {
-            id: format!("select_{}", uuid()),
+            id: new_id("select"),
             name,
-            step_type,
+            step_type: StepType::SelectColumns(columns),
             parameters: HashMap::new(),
             output_schema: Vec::new(),
         })
@@ -400,12 +385,10 @@ impl TransformationFactory {
         column: String,
         condition: String,
     ) -> Result<TransformationStep, TransformationError> {
-        let step_type = StepType::FilterRows(column, condition);
-
         Ok(TransformationStep {
-            id: format!("filter_{}", uuid()),
+            id: new_id("filter"),
             name,
-            step_type,
+            step_type: StepType::FilterRows(column, condition),
             parameters: HashMap::new(),
             output_schema: Vec::new(),
         })
@@ -416,12 +399,10 @@ impl TransformationFactory {
         columns: Vec<String>,
         aggregations: Vec<Aggregation>,
     ) -> Result<TransformationStep, TransformationError> {
-        let step_type = StepType::GroupBy(columns, aggregations);
-
         Ok(TransformationStep {
-            id: format!("group_{}", uuid()),
+            id: new_id("group"),
             name,
-            step_type,
+            step_type: StepType::GroupBy(columns, aggregations),
             parameters: HashMap::new(),
             output_schema: Vec::new(),
         })
@@ -432,12 +413,10 @@ impl TransformationFactory {
         columns: Vec<String>,
         descending: bool,
     ) -> Result<TransformationStep, TransformationError> {
-        let step_type = StepType::SortBy(columns, descending);
-
         Ok(TransformationStep {
-            id: format!("sort_{}", uuid()),
+            id: new_id("sort"),
             name,
-            step_type,
+            step_type: StepType::SortBy(columns, descending),
             parameters: HashMap::new(),
             output_schema: Vec::new(),
         })
@@ -448,12 +427,10 @@ impl TransformationFactory {
         old_name: String,
         new_name: String,
     ) -> Result<TransformationStep, TransformationError> {
-        let step_type = StepType::RenameColumn(old_name, new_name);
-
         Ok(TransformationStep {
-            id: format!("rename_{}", uuid()),
+            id: new_id("rename"),
             name,
-            step_type,
+            step_type: StepType::RenameColumn(old_name, new_name),
             parameters: HashMap::new(),
             output_schema: Vec::new(),
         })
@@ -463,23 +440,19 @@ impl TransformationFactory {
         name: String,
         columns: Vec<String>,
     ) -> Result<TransformationStep, TransformationError> {
-        let step_type = StepType::DropColumns(columns);
-
         Ok(TransformationStep {
-            id: format!("drop_{}", uuid()),
+            id: new_id("drop"),
             name,
-            step_type,
+            step_type: StepType::DropColumns(columns),
             parameters: HashMap::new(),
             output_schema: Vec::new(),
         })
     }
 }
 
-fn uuid() -> String {
-    use std::time::{SystemTime, UNIX_EPOCH};
-
-    let duration = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
-    format!("{}{}", duration.as_secs(), duration.subsec_nanos())
+/// Generate a unique step ID using the `uuid` crate.
+fn new_id(prefix: &str) -> String {
+    format!("{}_{}", prefix, uuid::Uuid::new_v4())
 }
 
 pub fn serialize_pipeline(pipeline: &TransformationPipeline) -> Result<String, serde_json::Error> {
@@ -513,16 +486,16 @@ impl fmt::Display for TransformationStep {
 impl fmt::Display for StepType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            StepType::SelectColumns(cols) => write!(f, "SelectColumns({:?})", cols),
-            StepType::FilterRows(col, cond) => write!(f, "FilterRows({}, {})", col, cond),
-            StepType::GroupBy(cols, aggs) => write!(f, "GroupBy({:?}, {:?})", cols, aggs),
-            StepType::SortBy(cols, desc) => write!(f, "SortBy({:?}, {})", cols, desc),
-            StepType::RenameColumn(old, new) => write!(f, "RenameColumn({}, {})", old, new),
-            StepType::DropColumns(cols) => write!(f, "DropColumns({:?})", cols),
-            StepType::CustomSql(sql) => write!(f, "CustomSql({})", sql),
-            StepType::AddColumn(col, formula) => write!(f, "AddColumn({}, {})", col, formula),
+            StepType::SelectColumns(cols) => write!(f, "SelectColumns({cols:?})"),
+            StepType::FilterRows(col, cond) => write!(f, "FilterRows({col}, {cond})"),
+            StepType::GroupBy(cols, aggs) => write!(f, "GroupBy({cols:?}, {aggs:?})"),
+            StepType::SortBy(cols, desc) => write!(f, "SortBy({cols:?}, {desc})"),
+            StepType::RenameColumn(old, new) => write!(f, "RenameColumn({old}, {new})"),
+            StepType::DropColumns(cols) => write!(f, "DropColumns({cols:?})"),
+            StepType::CustomSql(sql) => write!(f, "CustomSql({sql})"),
+            StepType::AddColumn(col, formula) => write!(f, "AddColumn({col}, {formula})"),
             StepType::RemoveDuplicates(keep_first) => {
-                write!(f, "RemoveDuplicates({})", keep_first)
+                write!(f, "RemoveDuplicates({keep_first})")
             }
         }
     }

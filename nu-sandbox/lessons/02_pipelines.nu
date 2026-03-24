@@ -47,7 +47,7 @@ ls | length
 ps | length
 
 # Example: Count how many commands start with "sys"
-help commands | where name | str starts-with "sys" | length
+help commands | where name | has "sys" | length
 
 # === INTERACTIVE EXPLORATION ===
 # The `explore` command lets you interactively drill into your data

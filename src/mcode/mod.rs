@@ -150,13 +150,13 @@ pub fn generate_diff(
         .collect();
 
     for transformed in transformed_schema {
-        if let Some(original_type) = original_types.get(transformed.name.as_str()) {
-            if *original_type != transformed.data_type.as_str() {
-                lines.push(format!(
-                    "  ~ Type changed: {} from {} to {}",
-                    transformed.name, original_type, transformed.data_type
-                ));
-            }
+        if let Some(original_type) = original_types.get(transformed.name.as_str())
+            && *original_type != transformed.data_type.as_str()
+        {
+            lines.push(format!(
+                "  ~ Type changed: {} from {} to {}",
+                transformed.name, original_type, transformed.data_type
+            ));
         }
     }
 

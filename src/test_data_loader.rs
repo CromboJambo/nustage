@@ -44,7 +44,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     let column_name = &col.name;
                     match df.column(column_name) {
                         Ok(col_data) => {
-                            if col_data.len() > 0 {
+                            if !col_data.is_empty() {
                                 // Just show first value
                                 let first_value =
                                     col_data.get(0).unwrap_or(polars::prelude::AnyValue::Null);
