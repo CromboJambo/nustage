@@ -2,6 +2,28 @@
 
 Nustage is a terminal-native data processing and analysis toolkit built in Rust. It loads CSV, Excel, and Parquet files, provides a TUI for interactive exploration, and supports transformation pipelines, IronCalc spreadsheet integration, and Power Query M code generation.
 
+## Product Boundary
+
+Nustage owns workflow-level features: named transformation steps, schema-aware operations, sidecar state, provenance, pipeline serialization, execution planning, SQL / M-code generation, and domain workflows that operate on fields, tables, and reproducible intent.
+
+Nustage does **not** own generic spreadsheet-viewer mechanics unless they directly support pipeline state. If a feature is primarily about:
+
+- raw grid rendering
+- cursor movement and scrolling
+- cell/range addressing
+- in-place sheet browsing/editing
+- plugin-specific UX
+- terminal spreadsheet interaction without pipeline semantics
+
+it likely belongs in `zellij-sheets`, not here.
+
+Use this rule:
+
+- `zellij-sheets` answers: "How do I inspect and navigate tabular data interactively?"
+- `nustage` answers: "How do I define, execute, persist, and understand tabular workflows?"
+
+When in doubt, keep Nustage focused on step pipelines, witness-layer visibility, and reproducible transformations.
+
 ## Project Structure & Module Organization
 
 ```
@@ -11,8 +33,8 @@ target/src/             # Source code (see note below)
   test_data_loader.rs   # `data_test` binary
   lib.rs                # Library root — re-exports all public modules
   cli/mod.rs            # CLI argument parsing (clap derive)
-  data/mod.rs           # Data loading (Polars, Calamine, DuckDB)
-  tui.rs / tui_grid.rs  # Terminal UI (ratatui + crossterm)
+  data/mod.rs           # Data loading and execution inputs (Polars, Calamine, DuckDB)
+  tui.rs / tui_grid.rs  # Witness-layer TUI for pipeline state and result inspection
   ironcalc/mod.rs       # IronCalc spreadsheet engine integration
   transformations/mod.rs# Transformation pipeline (steps, aggregation, serialization)
   mcode/mod.rs          # Power Query M code generation
@@ -24,6 +46,15 @@ docs/                   # Integration guides and release notes
 ```
 
 > **Note:** Source files currently reside under `target/src/` as referenced by `Cargo.toml`. The canonical paths in `Cargo.toml` are `src/main.rs` and `src/lib.rs`; ensure any new modules follow the same layout.
+
+## Feature Ownership Rules
+
+- Put pipeline definitions, step graphs, lineage, sidecar persistence, and execution metadata in `transformations/`, `sidecar/`, or adjacent library modules.
+- Put file-format loading, schema inference, and execution-engine glue in `data/`.
+- Keep `tui.rs` and `tui_grid.rs` focused on the witness layer: step list, schema, preview, query transparency, status, and execution feedback.
+- Avoid rebuilding a general spreadsheet app inside Nustage. If a TUI feature would still make sense with no pipeline, it probably belongs in `zellij-sheets`.
+- Prefer field-based and range-of-records abstractions over cell-addressed UX. Nustage is step-oriented, not formula-grid-oriented.
+- IronCalc integration belongs here only when it supports import/export, interoperability, or pipeline-adjacent spreadsheet logic. Generic sheet viewing/editing still belongs elsewhere.
 
 ## Build, Test & Development Commands
 
