@@ -3,7 +3,6 @@
 //! This is the main library module for the nustage project.
 
 pub mod data;
-pub mod ironcalc;
 pub mod transformations;
 
 /// Core data structures and utilities

@@ -15,10 +15,6 @@ struct Cli {
     #[arg(value_name = "FILE")]
     input: Option<String>,
 
-    /// Enable TUI mode
-    #[arg(long = "tui", help = "Enable terminal user interface mode")]
-    tui: bool,
-
     /// Output file path
     #[arg(long = "output", value_name = "OUTPUT_FILE")]
     output: Option<String>,
