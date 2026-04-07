@@ -35,7 +35,7 @@ Thank you for your interest in contributing to Nustage! This document provides g
 
 3. Run the examples:
    ```bash
-   cargo run --example ironcalc_integration
+   cargo run --example simple_demo
    ```
 
 ## Development Workflow
@@ -172,7 +172,7 @@ When reporting bugs or requesting features:
 
 ## Thank You!
 
-Your contributions make Nustage better. Thank you for helping to build a powerful terminal-native spreadsheet tool for data transformation and analysis!
+Your contributions make Nustage better. Thank you for helping build a focused tabular workflow toolkit in Rust.
 
 ---
 

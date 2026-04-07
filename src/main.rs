@@ -7,7 +7,7 @@ use std::path::Path;
 
 #[derive(Parser)]
 #[command(name = "nustage")]
-#[command(version = "0.1.2")]
+#[command(version = "0.1.3")]
 #[command(author = "Nustage Team")]
 #[command(about = "Terminal-native pipeline orchestration layer for tabular data")]
 struct Cli {

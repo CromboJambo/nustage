@@ -1,95 +1,64 @@
-# Nustage Quick Start Guide
+# Nustage Quick Start
 
-> **Version 0.1.2** — The first public release with honest documentation.
+This quick start reflects the current repository scope.
 
----
+## Build
 
-## Build from Source
+```bash
+cargo build
+```
+
+For an optimized binary:
 
 ```bash
 cargo build --release
 ```
 
----
+## Run the CLI
+
+Run against a file:
+
+```bash
+cargo run -- test_data/sales.csv
+```
+
+Run without an input file to use the current demo path:
+
+```bash
+cargo run
+```
 
 ## Run Examples
 
-### CSV Data (Recommended for Demo)
-
 ```bash
-cargo run --release --example simple_demo
+cargo run --example simple_demo
+cargo run --example power_query_workflow
 ```
-
-### Parquet Data
-
-```bash
-cargo run --release --example simple_demo
-```
-
-### IronCalc Integration
-
-```bash
-cargo run --release --example ironcalc_integration
-```
-
----
 
 ## Run Tests
 
 ```bash
-cargo test --release
+cargo test --all-features
 ```
 
----
+## Current Scope
 
-## Use the CLI
+Implemented in this repo today:
 
-```bash
-# Build
-cargo build --release
+- CSV and Parquet-oriented data handling through Polars types
+- Schema extraction with `nustage::data::get_schema`
+- Lightweight transformation pipeline structs
+- Minimal CLI and runnable examples
 
-# Run with CSV (recommended for demo)
-./target/release/nustage test_data/sales.csv
+Removed or not currently present:
 
-# Run with Parquet
-./target/release/nustage test_data/*.parquet
-```
+- `--tui` mode
+- TUI/grid rendering
+- Sidecar files
+- Excel/IronCalc integration
+- DuckDB-backed execution
 
----
+## Read Next
 
-## TUI Mode
-
-```bash
-./target/release/nustage --tui test_data/sales.csv
-```
-
----
-
-## See Also
-
-- [`README.md`](../README.md) — Overview of capabilities
-- [`IMPLEMENTATION_SUMMARY.md`](../IMPLEMENTATION_SUMMARY.md) — Refactor summary
-- [`ROADMAP.md`](roadmap/ROADMAP.md) — Feature priorities
-- [`COMPREHENSIVE_ROADMAP.md`](roadmap/COMPREHENSIVE_ROADMAP.md) — Detailed specifications
-
----
-
-## Current Status
-
-**Implemented:**
-- ✅ CLI binary with `--tui` flag
-- ✅ CSV and Parquet data loading
-- ✅ TUI with grid preview (row count, shape)
-- ✅ Examples compile and run
-- ✅ Unit tests pass
-
-**Aspirational (not yet built):**
-- ⏳ Step list panel in TUI
-- ⏳ Sidecar read/write (`.nustage.json`)
-- ⏳ SQL transparency display
-- ⏳ Real Excel loader (currently partial support)
-- ⏳ Charts and visualization
-- ⏳ Nushell integration
-- ⏳ Content-addressed sidecars
-
-See the [`ROADMAP`](roadmap/ROADMAP.md) for what's being built next.
+- [`README.md`](/home/crombo/nustage/README.md)
+- [`CONTRIBUTING.md`](/home/crombo/nustage/CONTRIBUTING.md)

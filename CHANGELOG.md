@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.3] - 2026-04-07
+
+### Changed
+- Rewrote top-level docs to match the reduced repository scope
+- Removed references to TUI mode, sidecars, DuckDB execution, and Excel integration from primary documentation
+- Updated integration docs to describe the current library boundary instead of removed sidecar and editor contracts
+- Updated contributor guidance to reference the examples that still exist in the repository
+- Bumped the crate and CLI version from `0.1.2` to `0.1.3`
+
 ## [0.1.2] - 2026-03-09
 
 ### Changed
@@ -113,4 +122,3 @@ Initial development phase. Core functionality implemented but not yet fully test
 
 **Version 0.1.2** is the first honest public release, marking the transition from aspirational claims to transparent documentation of what's actually built versus what's planned.
 ```
-
