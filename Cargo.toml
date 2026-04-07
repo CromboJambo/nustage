@@ -6,10 +6,6 @@ edition = "2024"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [[bin]]
-name = "data_test"
-path = "src/test_data_loader.rs"
-
-[[bin]]
 name = "nustage"
 path = "src/main.rs"
 

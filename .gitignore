@@ -6,6 +6,7 @@ bin/.*
 test_data/
 *.tmp
 *.temp
+ServiceOrderMargin/data/
 
 # Cache and generated outputs
 *.csv.cache
@@ -19,6 +20,7 @@ test_data/
 *.swp
 *.swo
 *~
+*.zed
 
 # Build artifacts
 target/
