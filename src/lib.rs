@@ -3,9 +3,9 @@
 //! This is the main library module for the nustage project.
 
 pub mod data;
+pub mod export;
 pub mod sidecar;
 pub mod transformations;
-pub mod export;
 
 /// Core data structures and utilities
 pub mod core {
