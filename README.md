@@ -101,6 +101,6 @@ it should not be added here.
 
 ## Related Docs
 
-- [`QUICKSTART.md`](/home/crombo/nustage/QUICKSTART.md)
-- [`CONTRIBUTING.md`](/home/crombo/nustage/CONTRIBUTING.md)
-- [`docs/integration/README.md`](/home/crombo/nustage/docs/integration/README.md)
+- `QUICKSTART.md`
+- `CONTRIBUTING.md`
+- `docs/integration/README.md`
