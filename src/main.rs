@@ -3,6 +3,7 @@
 //! This is the main entry point for the nustage CLI application.
 
 use clap::Parser;
+use std::fs;
 use std::path::Path;
 
 #[derive(Parser)]
@@ -18,6 +19,14 @@ struct Cli {
     /// Output file path
     #[arg(long = "output", value_name = "OUTPUT_FILE")]
     output: Option<String>,
+
+    /// Sidecar metadata file path
+    #[arg(long = "sidecar", value_name = "SIDECAR_FILE")]
+    sidecar: Option<String>,
+
+    /// Export xlsx sheets to CSV files
+    #[arg(long = "export", value_name = "OUTPUT_DIR")]
+    export: Option<String>,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -29,10 +38,50 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         if Path::new(&input_file).exists() {
             println!("Processing input file: {}", input_file);
 
-            // In a real implementation, we would:
-            // 1. Load the data file
-            // 2. Apply transformations
-            // 3. Output results
+            let ext = input_file.rsplit('.').next().unwrap_or_default();
+            match ext {
+                "xlsx" | "xlsm" | "xlsb" | "xls" | "xla" | "xlam" => {
+                    let workbook = nustage::data::open_excel(&input_file)?;
+                    println!("Sheets: {:?}", nustage::data::sheet_names(&workbook));
+                    let formulas = nustage::data::defined_names(&workbook);
+                    println!("Defined names: {:?}", formulas);
+                    println!("Excel loaded");
+                }
+                "csv" => {
+                    println!("CSV loading path");
+                }
+                "parquet" => {
+                    println!("Parquet loading path");
+                }
+                _ => {
+                    println!("Unknown file type");
+                }
+            }
+
+            if let Some(sidecar_path) = cli.sidecar {
+                let pipeline_name = "Pipeline".to_string();
+                let output_file = cli
+                    .output
+                    .clone()
+                    .unwrap_or_else(|| "default_output".to_string());
+                let state = nustage::sidecar::SidecarState::new(
+                    pipeline_name.clone(),
+                    input_file.clone(),
+                    output_file,
+                );
+                println!("Sidecar state initialized for {}", pipeline_name);
+                nustage::sidecar::save_sidecar(&state, &sidecar_path)?;
+                println!("Sidecar saved to {}", sidecar_path);
+            }
+
+            if let Some(output_dir) = cli.export {
+                fs::create_dir_all(&output_dir)?;
+                let csv_paths = nustage::export::export_xlsx(&input_file, &output_dir)?;
+                println!("Exported {} sheets to CSV:", csv_paths.len());
+                for p in csv_paths {
+                    println!("  {}", p);
+                }
+            }
 
             println!("File processing completed");
         } else {
