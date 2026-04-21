@@ -25,6 +25,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated repository guidelines to reflect current project structure
 - Bumped the crate and CLI version from `0.1.3` to `0.1.4`
 
+### Security
+- `cargo audit` found 4 high-severity vulnerabilities in transitive dependencies (`quinn-proto`, `rustls-webpki`) via `polars → reqwest`
+- `polars` is already at its latest version (`0.53.0`) — patched versions require upstream polars update
+- 2 allowed warnings: `bincode` (unmaintained) and `rand` (unsound) via `polars`
+
 ## [0.1.3] - 2026-04-07
 
 ### Changed
