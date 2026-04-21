@@ -24,7 +24,7 @@ Thank you for your interest in contributing to Nustage! This document provides g
 
 1. Fork and clone the repository:
    ```bash
-   git clone https://github.com/CromboJambo/nustage.git
+    git clone https://github.com/<org>/nustage.git
    cd nustage
    ```
 
