@@ -1,6 +1,6 @@
 # Nustage 0.1.2 — Honest Documentation Release
 
-> Historical note: this file reflects the repository state and documentation claims at the time of the 0.1.2 release. It is not a description of the current codebase after later scope cuts. For the current surface, use [`README.md`](/home/crombo/nustage/README.md) and [`QUICKSTART.md`](/home/crombo/nustage/QUICKSTART.md).
+> Historical note: this file reflects the repository state and documentation claims at the time of the 0.1.2 release. It is not a description of the current codebase after later scope cuts. For the current surface, use `README.md` and `QUICKSTART.md`.
 
 **Release Date:** 2026-03-03  
 **Version:** 0.1.2  
