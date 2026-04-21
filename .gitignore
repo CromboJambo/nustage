@@ -36,3 +36,4 @@ docs/Screenshot_*
 # Agents and AI-generated files
 .agents/
 .research/
+state-docs/
