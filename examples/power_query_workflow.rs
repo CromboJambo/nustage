@@ -11,7 +11,9 @@
 use std::fs::File;
 use std::path::Path;
 
+use calamine::{DataType, Reader, open_workbook_auto};
 use nustage::data;
+use nustage::sidecar;
 use nustage::transformations::{
     Aggregation, AggregationOperation, ColumnSchema as TransformColumnSchema,
     TransformationFactory, TransformationPipeline,
@@ -92,6 +94,62 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     CsvWriter::new(&mut file).finish(&mut summary_df)?;
 
     println!("Report written to {}", output_path);
+
+    let sidecar_path = "sidecar_output.json";
+    let mut sidecar_state = sidecar::SidecarState::new(
+        "Sales Summary".to_string(),
+        "sales.csv".to_string(),
+        output_path.to_string(),
+    );
+    sidecar_state.add_entry(sidecar::SidecarEntry {
+        step_name: "Select columns".to_string(),
+        input_columns: Vec::new(),
+        output_columns: vec![
+            "Date".to_string(),
+            "Region".to_string(),
+            "Product".to_string(),
+            "Units".to_string(),
+            "Revenue".to_string(),
+        ],
+        transformation_type: "select".to_string(),
+    })?;
+    sidecar_state.add_entry(sidecar::SidecarEntry {
+        step_name: "Filter high revenue".to_string(),
+        input_columns: vec![
+            "Date".to_string(),
+            "Region".to_string(),
+            "Product".to_string(),
+            "Units".to_string(),
+            "Revenue".to_string(),
+        ],
+        output_columns: vec![
+            "Date".to_string(),
+            "Region".to_string(),
+            "Product".to_string(),
+            "Units".to_string(),
+            "Revenue".to_string(),
+        ],
+        transformation_type: "filter".to_string(),
+    })?;
+    sidecar_state.add_entry(sidecar::SidecarEntry {
+        step_name: "Group by region".to_string(),
+        input_columns: vec![
+            "Date".to_string(),
+            "Region".to_string(),
+            "Product".to_string(),
+            "Units".to_string(),
+            "Revenue".to_string(),
+        ],
+        output_columns: vec![
+            "Region".to_string(),
+            "Revenue".to_string(),
+            "Units".to_string(),
+        ],
+        transformation_type: "group_by".to_string(),
+    })?;
+    sidecar::save_sidecar(&sidecar_state, sidecar_path)?;
+    println!("Sidecar saved to {}", sidecar_path);
+
     println!("\n=== Example Complete ===");
 
     Ok(())
