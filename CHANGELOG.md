@@ -5,16 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.1.3] - 2026-04-07
+## [0.1.4] - 2026-04-21
+
+### Added
+- **Sidecar persistence module** (`src/sidecar.rs`) — pipeline provenance storage with step history, schema snapshots, and UUID-based identity
+- **Excel CSV export module** (`src/export.rs`) — workbook-to-CSV conversion with multi-sheet and single-sheet export
+- `csv` crate dependency for CSV writing
+- `calamine` dependency updated from `0.33` to `0.34.0`
+
+### Removed
+- QUICKSTART.md
+- PSV.md
+- IMPLEMENTATION_SUMMARY.md
 
 ### Changed
-- Rewrote top-level docs to match the reduced repository scope
-- Removed references to TUI mode, sidecars, DuckDB execution, and Excel integration from primary documentation
-- Updated integration docs to describe the current library boundary instead of removed sidecar and editor contracts
-- Updated contributor guidance to reference the examples that still exist in the repository
-- Bumped the crate and CLI version from `0.1.2` to `0.1.3`
+- Updated `calamine` dependency version
+- Ordered core modules in `lib.rs`
+- Updated `power_query_workflow.rs` example
+- Updated repository guidelines to reflect current project structure
+- Bumped the crate and CLI version from `0.1.3` to `0.1.4`
 
-## [0.1.2] - 2026-03-09
+## [0.1.3] - 2026-04-07
 
 ### Changed
 - Updated documentation to reflect honest current implementation status
@@ -120,5 +131,4 @@ Initial development phase. Core functionality implemented but not yet fully test
 
 ---
 
-**Version 0.1.2** is the first honest public release, marking the transition from aspirational claims to transparent documentation of what's actually built versus what's planned.
-```
+**Version 0.1.4** adds sidecar pipeline provenance and Excel CSV export capabilities to the core library.
