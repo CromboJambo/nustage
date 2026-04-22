@@ -11,7 +11,6 @@
 use std::fs::File;
 use std::path::Path;
 
-use calamine::{DataType, Reader, open_workbook_auto};
 use nustage::data;
 use nustage::sidecar;
 use nustage::transformations::{
