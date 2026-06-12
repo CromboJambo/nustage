@@ -139,3 +139,107 @@ pub fn export_excel_to_csv(
     }
     Ok(csv_paths)
 }
+
+/// Load a CSV file into a Polars DataFrame
+pub fn load_csv(path: &str) -> Result<DataFrame, PolarsError> {
+    CsvReader::from_path(path)?.finish()
+}
+
+/// Infer schema from a CSV file path
+pub fn csv_schema(path: &str) -> Result<Vec<ColumnSchema>, PolarsError> {
+    let df = load_csv(path)?;
+    get_schema(&df)
+}
+
+/// Compute basic statistics for numeric columns in a CSV DataFrame
+pub fn csv_stats(
+    df: &DataFrame,
+) -> Result<
+    Vec<(
+        String,
+        f64,
+        f64,
+        usize,
+        usize,
+        usize,
+        usize,
+        usize,
+        usize,
+        usize,
+        usize,
+    )>,
+    PolarsError,
+> {
+    let mut stats = Vec::new();
+    for (name, dtype) in df.schema().iter() {
+        if dtype == &DataType::Float64
+            || dtype == &DataType::Int64
+            || dtype == &DataType::UInt64
+            || dtype == &DataType::Float32
+            || dtype == &DataType::Int32
+            || dtype == &DataType::UInt32
+        {
+            let col = df.column(name)?;
+            let sum = col.sum();
+            let min = col.min();
+            let max = col.max();
+            let null_count = col.null_count();
+            let non_null_count = col.len() - null_count;
+            let mean = if non_null_count > 0 {
+                sum / non_null_count as f64
+            } else {
+                0.0
+            };
+            let count = col.len();
+            let unique_count = col.n_unique()?;
+            let median = col.median()?;
+            let std_dev = col.std(1)?;
+            stats.push((
+                name.to_string(),
+                mean,
+                sum,
+                count,
+                non_null_count,
+                null_count,
+                min.unwrap_or(0.0),
+                max.unwrap_or(0.0),
+                unique_count,
+                median.unwrap_or(0.0),
+                std_dev.unwrap_or(0.0),
+            ));
+        }
+    }
+    Ok(stats)
+}
+
+/// Summarize a CSV file: rows, columns, schema, and numeric stats
+pub fn csv_summary(
+    path: &str,
+) -> Result<
+    (
+        usize,
+        usize,
+        Vec<ColumnSchema>,
+        Vec<(
+            String,
+            f64,
+            f64,
+            usize,
+            usize,
+            usize,
+            usize,
+            usize,
+            usize,
+            usize,
+            usize,
+        )>,
+    ),
+    PolarsError,
+> {
+    let df = load_csv(path)?;
+    let rows = df.height();
+    let cols = df.width();
+    let schema = get_schema(&df)?;
+    let stats = csv_stats(&df)?;
+    Ok((rows, cols, schema, stats))
+}

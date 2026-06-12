@@ -48,7 +48,52 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     println!("Excel loaded");
                 }
                 "csv" => {
-                    println!("CSV loading path");
+                    let df = nustage::data::load_csv(&input_file)?;
+                    let rows = df.height();
+                    let cols = df.width();
+                    println!("CSV loaded: {} rows, {} columns", rows, cols);
+                    let schema = nustage::data::csv_schema(&input_file)?;
+                    println!("Schema:");
+                    for col in schema {
+                        println!(
+                            "  col_{}: {} (type: {})",
+                            col.index, col.name, col.data_type
+                        );
+                    }
+                    let stats = nustage::data::csv_stats(&df)?;
+                    if !stats.is_empty() {
+                        println!("Numeric stats:");
+                        for (
+                            name,
+                            mean,
+                            sum,
+                            count,
+                            non_null,
+                            null,
+                            min,
+                            max,
+                            unique,
+                            median,
+                            std_dev,
+                        ) in stats
+                        {
+                            println!(
+                                "  {}: mean={}, sum={}, count={}, non_null={}, null={}, min={}, max={}, unique={}, median={}, std_dev={}",
+                                name,
+                                mean,
+                                sum,
+                                count,
+                                non_null,
+                                null,
+                                min,
+                                max,
+                                unique,
+                                median,
+                                std_dev
+                            );
+                        }
+                    }
+                    println!("CSV analysis completed");
                 }
                 "parquet" => {
                     println!("Parquet loading path");
