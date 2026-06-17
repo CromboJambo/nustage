@@ -37,3 +37,5 @@ docs/Screenshot_*
 .agents/
 .research/
 state-docs/
+guard.db
+knowledge.db
