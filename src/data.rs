@@ -3,6 +3,7 @@
 //! This is the data module for the nustage project.
 
 use calamine::{Data, Range, Reader, Sheets, open_workbook_auto};
+use polars::io::csv::read::CsvReader;
 use polars::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::fs::File;
@@ -142,7 +143,13 @@ pub fn export_excel_to_csv(
 
 /// Load a CSV file into a Polars DataFrame
 pub fn load_csv(path: &str) -> Result<DataFrame, PolarsError> {
-    CsvReader::from_path(path)?.finish()
+    CsvReader::new(
+        File::open(path).map_err(|e| polars::error::PolarsError::IO {
+            error: std::sync::Arc::new(e),
+            msg: None,
+        })?,
+    )
+    .finish()
 }
 
 /// Infer schema from a CSV file path
@@ -152,6 +159,7 @@ pub fn csv_schema(path: &str) -> Result<Vec<ColumnSchema>, PolarsError> {
 }
 
 /// Compute basic statistics for numeric columns in a CSV DataFrame
+#[allow(clippy::type_complexity)]
 pub fn csv_stats(
     df: &DataFrame,
 ) -> Result<
@@ -162,11 +170,11 @@ pub fn csv_stats(
         usize,
         usize,
         usize,
+        f64,
+        f64,
         usize,
-        usize,
-        usize,
-        usize,
-        usize,
+        f64,
+        f64,
     )>,
     PolarsError,
 > {
@@ -180,9 +188,21 @@ pub fn csv_stats(
             || dtype == &DataType::UInt32
         {
             let col = df.column(name)?;
-            let sum = col.sum();
-            let min = col.min();
-            let max = col.max();
+            let sum = col
+                .sum_reduce()?
+                .into_value()
+                .extract::<f64>()
+                .unwrap_or(0.0);
+            let min = col
+                .min_reduce()?
+                .into_value()
+                .extract::<f64>()
+                .unwrap_or(0.0);
+            let max = col
+                .max_reduce()?
+                .into_value()
+                .extract::<f64>()
+                .unwrap_or(0.0);
             let null_count = col.null_count();
             let non_null_count = col.len() - null_count;
             let mean = if non_null_count > 0 {
@@ -192,8 +212,16 @@ pub fn csv_stats(
             };
             let count = col.len();
             let unique_count = col.n_unique()?;
-            let median = col.median()?;
-            let std_dev = col.std(1)?;
+            let median = col
+                .median_reduce()?
+                .into_value()
+                .extract::<f64>()
+                .unwrap_or(0.0);
+            let std_dev = col
+                .std_reduce(1)?
+                .into_value()
+                .extract::<f64>()
+                .unwrap_or(0.0);
             stats.push((
                 name.to_string(),
                 mean,
@@ -201,11 +229,11 @@ pub fn csv_stats(
                 count,
                 non_null_count,
                 null_count,
-                min.unwrap_or(0.0),
-                max.unwrap_or(0.0),
+                min,
+                max,
                 unique_count,
-                median.unwrap_or(0.0),
-                std_dev.unwrap_or(0.0),
+                median,
+                std_dev,
             ));
         }
     }
@@ -213,6 +241,7 @@ pub fn csv_stats(
 }
 
 /// Summarize a CSV file: rows, columns, schema, and numeric stats
+#[allow(clippy::type_complexity)]
 pub fn csv_summary(
     path: &str,
 ) -> Result<
@@ -227,11 +256,11 @@ pub fn csv_summary(
             usize,
             usize,
             usize,
+            f64,
+            f64,
             usize,
-            usize,
-            usize,
-            usize,
-            usize,
+            f64,
+            f64,
         )>,
     ),
     PolarsError,
